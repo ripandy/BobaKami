@@ -1,14 +1,15 @@
 {
   "dependencies": {
     "com.annulusgames.lit-motion": "https://github.com/AnnulusGames/LitMotion.git?path=src/LitMotion/Assets/LitMotion",
-    "com.cysharp.magiconion": "https://github.com/Cysharp/MagicOnion.git?path=src/MagicOnion.Client.Unity/Assets/Scripts/MagicOnion#6.1.6",
+    "com.cysharp.magiconion.client.unity": "https://github.com/Cysharp/MagicOnion.git?path=src/MagicOnion.Client.Unity/Assets/Scripts/MagicOnion.Client.Unity#7.0.0",
     "com.cysharp.r3": "1.2.9",
     "com.cysharp.unitask": "2.5.10",
     "com.cysharp.yetanotherhttphandler": "https://github.com/Cysharp/YetAnotherHttpHandler.git?path=src/YetAnotherHttpHandler#1.9.0",
-    "com.cysharp.yetanotherhttphandler.dependencies": "https://github.com/Cysharp/YetAnotherHttpHandler.git?path=src/YetAnotherHttpHandler.Dependencies#1.9.0",
-    "com.github.messagepack-csharp": "https://github.com/MessagePack-CSharp/MessagePack-CSharp.git?path=src/MessagePack.UnityClient/Assets/Scripts/MessagePack#v3.1.1",
+    "com.github-glitchenzo.nugetforunity": "4.2.0",
+    "com.github.messagepack-csharp": "https://github.com/MessagePack-CSharp/MessagePack-CSharp.git?path=src/MessagePack.UnityClient/Assets/Scripts/MessagePack#v3.1.2",
     "com.ripandy.appstatemanagement": "file:./../../ModuleCollections/AppStateManagement",
     "com.ripandy.audiomanagement": "file:./../../ModuleCollections/AudioManagement",
+    "com.ripandy.blendshapebroadcastclient": "file:./../../ModuleCollections/BlendShapeBroadcastClient",
     "com.ripandy.debugtools": "file:./../../ModuleCollections/DebugTools",
     "com.ripandy.facedetectionhandler": "file:./../../ModuleCollections/FaceDetectionHandler",
     "com.ripandy.gridmanagement": "file:./../../ModuleCollections/GridManagement",
@@ -28,11 +29,6 @@
     "com.unity.ugui": "2.0.0",
     "com.unity.visualscripting": "1.9.5",
     "com.unity.xr.arkit": "6.0.5",
-    "org.nuget.grpc.net.client": "2.67.0",
-    "org.nuget.messagepack": "3.1.1",
-    "org.nuget.microsoft.net.stringtools": "1.0.0",
-    "org.nuget.r3": "1.2.9",
-    "org.nuget.system.io.pipelines": "9.0.1",
     "st.mewli.core": "https://github.com/mewlist/MewCore.git",
     "st.mewli.di": "https://github.com/mewlist/Doinject.git",
     "com.unity.modules.accessibility": "1.0.0",
@@ -74,14 +70,8 @@
       "url": "https://package.openupm.com",
       "scopes": [
         "com.cysharp",
+        "com.github-glitchenzo",
         "jp.hadashikick"
-      ]
-    },
-    {
-      "name": "Unity NuGet",
-      "url": "https://unitynuget-registry.azurewebsites.net",
-      "scopes": [
-        "org.nuget"
       ]
     }
   ]
