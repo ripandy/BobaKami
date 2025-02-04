@@ -2,12 +2,10 @@
     "name": "NetworkManagement",
     "rootNamespace": "",
     "references": [
-        "GUID:62b9d94cd08d5d047b266d42e8684cb8",
-        "GUID:ccdb2a3bafe19b34792bb6e19521813e",
-        "GUID:38c440962436584418766c09abfa6915",
         "GUID:350d0af80fb7b7947a59de66ab477547",
         "GUID:c3bc0afe4a069b54aa23296f3c18a871",
-        "GUID:034c977408447714e91237bd5f97c1ff"
+        "GUID:034c977408447714e91237bd5f97c1ff",
+        "GUID:1a7b5782217aa46bf8206b36103fc4a9"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

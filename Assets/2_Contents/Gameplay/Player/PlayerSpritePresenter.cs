@@ -28,12 +28,12 @@ namespace Contents.Gameplay
             var s1 = playerDirection.Subscribe(OnPlayerDirection);
             var s2 = mouthOpenEvent.AsObservable().SubscribeAwait(OnMouthOpen, AwaitOperation.Drop);
             
-#if UNITY_IOS && !UNITY_EDITOR
+// #if UNITY_IOS && !UNITY_EDITOR
             var s3 = isEyeBlinkEvent.Subscribe(OnBlink);
-#else
-            var s3 = Observable.Interval(TimeSpan.FromSeconds(3))
-                .SubscribeAwait(async (_, token) => await TryUpdateAutoBlink(token));
-#endif
+// #else
+//             var s3 = Observable.Interval(TimeSpan.FromSeconds(3))
+//                 .SubscribeAwait(async (_, token) => await TryUpdateAutoBlink(token));
+// #endif
 
             var s4 = currentSprite.Subscribe(UpdateSprite);
             

@@ -25,18 +25,18 @@ namespace Contents.Gameplay
         
         private DirectionEnum ConvertToDirectionEnum(Vector2 directionVector)
         {
-#if UNITY_IOS && !UNITY_EDITOR
+// #if UNITY_IOS && !UNITY_EDITOR
             return directionVector.x >= faceLookThreshold ? DirectionEnum.Right :
                 directionVector.x <= -faceLookThreshold ? DirectionEnum.Left :
                 DirectionEnum.Forward;
-#else
-            var current = (int)currentDirection;
-            current += directionVector.x >= faceLookThreshold ? 1 :
-                directionVector.x <= -faceLookThreshold ? -1 :
-                0;
-            current = Mathf.Clamp(current, -1, 1);
-            return (DirectionEnum)current;
-#endif
+// #else
+//             var current = (int)currentDirection;
+//             current += directionVector.x >= faceLookThreshold ? 1 :
+//                 directionVector.x <= -faceLookThreshold ? -1 :
+//                 0;
+//             current = Mathf.Clamp(current, -1, 1);
+//             return (DirectionEnum)current;
+// #endif
         }
     }
 }

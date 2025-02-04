@@ -565,6 +565,71 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!1 &769753777
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 769753779}
+  - component: {fileID: 769753778}
+  - component: {fileID: 769753780}
+  m_Layer: 0
+  m_Name: BlendShapeBroadcastClient
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &769753778
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 769753777}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1966f8036f74bb0a4c45d0cd1fb0169, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  blendShapeWeightCollection: {fileID: 11400000, guid: c9c947be89b984ae5aab43006305d7d7, type: 2}
+  directionVectorEvent: {fileID: 11400000, guid: cdfd753ea791f4a17a6deb42391ec24f, type: 2}
+  connectionSetting: {fileID: 11400000, guid: 8072cf3a1537a49958c25201411ee3a9, type: 2}
+  isSource: 0
+--- !u!4 &769753779
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 769753777}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 1
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &769753780
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 769753777}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91599c7b15e14897a5e1f68245357d09, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  blendShapeWeightCollection: {fileID: 11400000, guid: c9c947be89b984ae5aab43006305d7d7, type: 2}
+  triggerFlagVariable: {fileID: 11400000, guid: b42fe5f21c385475ebb35e4d32286df1, type: 2}
+  triggerValueThreshold: 0.4
+  blendShapeToObserve: 24
 --- !u!1001 &931979476
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1190,3 +1255,4 @@ SceneRoots:
   - {fileID: 1635772535}
   - {fileID: 1867779379}
   - {fileID: 532966495}
+  - {fileID: 769753779}

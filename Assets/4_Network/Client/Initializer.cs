@@ -1,7 +1,7 @@
+using BlendShapeBroadcast.Shared;
 using Grpc.Net.Client;
 using MagicOnion.Client;
 using MagicOnion.Unity;
-using MagicOnionTest.Shared;
 using MessagePack;
 using MessagePack.Resolvers;
 using MessagePack.Unity;
@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Network.Client
 {
-    [MagicOnionClientGeneration(typeof(IMyFirstService))]
+    [MagicOnionClientGeneration(typeof(IBlendShapeHub))]
     partial class MagicOnionGeneratedClientInitializer
     {
     }
@@ -22,9 +22,6 @@ namespace Network.Client
             // NOTE: Currently, CompositeResolver doesn't work on Unity IL2CPP build. Use StaticCompositeResolver instead of it.
             StaticCompositeResolver.Instance.Register(
                 MagicOnionGeneratedClientInitializer.Resolver,
-                SourceGeneratedFormatterResolver.Instance,
-                BuiltinResolver.Instance,
-                PrimitiveObjectResolver.Instance,
                 StandardResolver.Instance,
                 UnityResolver.Instance
             );
