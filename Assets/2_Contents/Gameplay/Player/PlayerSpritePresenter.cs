@@ -2,14 +2,14 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
-using Kusoge.Interfaces;
+using BobaKami.Interfaces;
 using R3;
 using Soar.Events;
 using Soar.Variables;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-namespace Contents.Gameplay
+namespace BobaKami.Gameplay
 {
     public class PlayerSpritePresenter : MonoBehaviour
     {

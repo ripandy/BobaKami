@@ -2,11 +2,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
-using Kusoge.Interfaces;
+using BobaKami.Interfaces;
 using LitMotion;
 using UnityEngine;
 
-namespace Contents.Gameplay
+namespace BobaKami.Gameplay
 {
     public class IntroPresenter : MonoBehaviour, IIntroPresenter
     {

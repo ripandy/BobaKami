@@ -1,9 +1,9 @@
 using System.Threading;
 using System.Threading.Tasks;
-using Kusoge.Interfaces;
+using BobaKami.Interfaces;
 using Soar.Events;
 
-namespace Contents.Gameplay
+namespace BobaKami.Gameplay
 {
     public class BittenBeanGameEvent : GameEvent<int>, IPlayerBiteInputProvider
     {

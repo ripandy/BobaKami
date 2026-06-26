@@ -1,9 +1,9 @@
 using System;
-using Kusoge.Interfaces;
+using BobaKami.Interfaces;
 using Soar.Events;
 using UnityEngine;
 
-namespace Contents.Gameplay
+namespace BobaKami.Gameplay
 {
     public class PlayerDirectionPresenter : MonoBehaviour
     {

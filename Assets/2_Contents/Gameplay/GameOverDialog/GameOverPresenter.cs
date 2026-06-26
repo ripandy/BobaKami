@@ -3,8 +3,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
-using Kusoge.DataTransferObjects;
-using Kusoge.Interfaces;
+using BobaKami.DataTransferObjects;
+using BobaKami.Interfaces;
 using LitMotion;
 using R3;
 using Soar.Events;
@@ -13,7 +13,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Contents.Gameplay
+namespace BobaKami.Gameplay
 {
     public class GameOverPresenter : MonoBehaviour, IGameOverPresenter
     {

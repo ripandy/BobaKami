@@ -2,7 +2,7 @@ using System;
 using Soar.Collections;
 using UnityEngine;
 
-namespace Contents.Gameplay
+namespace BobaKami.Gameplay
 {
     public class PlayerSpriteCollection : SoarDictionary<PlayerSpriteEnum, Sprite>
     {

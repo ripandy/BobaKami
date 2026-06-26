@@ -1,13 +1,13 @@
 using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using Kusoge.DataTransferObjects;
+using BobaKami.DataTransferObjects;
 using LitMotion;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Contents.Gameplay.HUD
+namespace BobaKami.Gameplay.HUD
 {
     public class GameStatPresenter : MonoBehaviour
     {

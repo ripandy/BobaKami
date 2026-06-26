@@ -1,11 +1,11 @@
-using Contents.Gameplay.HUD;
+using BobaKami.Gameplay.HUD;
 using Doinject;
-using Kusoge;
-using Kusoge.GameStates;
-using Kusoge.Interfaces;
+using BobaKami;
+using BobaKami.GameStates;
+using BobaKami.Interfaces;
 using UnityEngine;
 
-namespace Contents.Gameplay
+namespace BobaKami.Gameplay
 {
     public class GameplayBindingInstaller : MonoBehaviour, IBindingInstaller
     {

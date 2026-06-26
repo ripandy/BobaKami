@@ -1,14 +1,14 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
-using Kusoge.Interfaces;
+using BobaKami.Interfaces;
 using R3;
 using Soar.Variables;
 using UnityEngine;
 
-namespace Contents.Gameplay
+namespace BobaKami.Gameplay
 {
-    [CreateAssetMenu(fileName = "FaceDirectionConverterVectorVariable", menuName = "Kusoge/FaceDirectionConverterVectorVariable")]
+    [CreateAssetMenu(fileName = "FaceDirectionConverterVectorVariable", menuName = "BobaKami/FaceDirectionConverterVectorVariable")]
     public class FaceDirectionConverterVectorVariable : Variable<Vector2>, IPlayerDirectionInputProvider
     {
         [SerializeField] private float faceLookThreshold = 0.3f;

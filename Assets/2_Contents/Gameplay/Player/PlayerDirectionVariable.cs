@@ -1,7 +1,7 @@
-using Kusoge.Interfaces;
+using BobaKami.Interfaces;
 using Soar.Variables;
 
-namespace Contents.Gameplay
+namespace BobaKami.Gameplay
 {
     public class PlayerDirectionVariable : Variable<DirectionEnum>, IPlayerDirectionPresenter
     {
