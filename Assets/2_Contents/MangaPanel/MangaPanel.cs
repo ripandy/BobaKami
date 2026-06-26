@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using DelayType = LitMotion.DelayType;
 
-namespace Feature.MainMenu
+namespace BobaKami.MainMenu
 {
     public class MangaPanel : MonoBehaviour
     {

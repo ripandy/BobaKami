@@ -10,7 +10,7 @@ using Soar.Events;
 using Soar.Variables;
 using UnityEngine;
 
-namespace Contents.Gameplay
+namespace BobaKami.Gameplay
 {
     public class BiteInputHandler : MonoBehaviour
     {

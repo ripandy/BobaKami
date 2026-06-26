@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
-using Kusoge;
-using Kusoge.Interfaces;
+using BobaKami;
+using BobaKami.Interfaces;
 using Soar.Collections;
 using Soar.Events;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-namespace Contents.Gameplay
+namespace BobaKami.Gameplay
 {
     public class BeanPresenter : MonoBehaviour, IBeanPresenter
     {

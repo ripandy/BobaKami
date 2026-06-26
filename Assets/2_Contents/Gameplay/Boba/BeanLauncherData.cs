@@ -1,7 +1,7 @@
-using Kusoge;
+using BobaKami;
 using Soar.Variables;
 
-namespace Contents.Gameplay
+namespace BobaKami.Gameplay
 {
     public class BeanLauncherData : JsonableVariable<BeanLauncher>
     {

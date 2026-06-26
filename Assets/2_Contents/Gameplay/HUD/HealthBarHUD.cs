@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Contents.Gameplay.HUD
+namespace BobaKami.Gameplay.HUD
 {
     public class HealthBarHUD : MonoBehaviour
     {

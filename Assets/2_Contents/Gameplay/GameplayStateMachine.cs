@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Doinject;
-using Kusoge;
-using Kusoge.GameStates;
+using BobaKami;
+using BobaKami.GameStates;
 using Soar.Commands;
 using UnityEngine;
 
-namespace Contents.Gameplay
+namespace BobaKami.Gameplay
 {
     public class GameplayStateMachine : MonoBehaviour, IInjectableComponent
     {

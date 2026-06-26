@@ -1,7 +1,7 @@
-using Kusoge.Interfaces;
+using BobaKami.Interfaces;
 using Soar.Variables;
 
-namespace Contents.Gameplay.HUD
+namespace BobaKami.Gameplay.HUD
 {
     public class HealthPercentageVariable : Variable<float>, IPlayerHealthPresenter
     {
