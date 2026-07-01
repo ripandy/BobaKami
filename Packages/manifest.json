@@ -1,8 +1,9 @@
 {
   "dependencies": {
-    "com.annulusgames.lit-motion": "https://github.com/AnnulusGames/LitMotion.git?path=src/LitMotion/Assets/LitMotion",
-    "com.cysharp.r3": "1.3.0",
-    "com.cysharp.unitask": "2.5.10",
+    "com.annulusgames.lit-motion": "https://github.com/AnnulusGames/LitMotion.git?path=src/LitMotion/Assets/LitMotion#v2.0.2",
+    "com.cysharp.r3": "1.3.1",
+    "com.cysharp.unitask": "2.5.11",
+    "com.github-glitchenzo.nugetforunity": "4.5.0",
     "com.ripandy.appstatemanagement": "file:./../../ModuleCollections/AppStateManagement",
     "com.ripandy.audiomanagement": "file:./../../ModuleCollections/AudioManagement",
     "com.ripandy.debugtools": "file:./../../ModuleCollections/DebugTools",
@@ -24,7 +25,6 @@
     "com.unity.ugui": "2.5.0",
     "com.unity.visualscripting": "1.9.11",
     "com.unity.xr.arkit": "6.5.0",
-    "org.nuget.r3": "1.3.0",
     "st.mewli.core": "https://github.com/mewlist/MewCore.git",
     "st.mewli.di": "https://github.com/mewlist/Doinject.git",
     "com.unity.modules.accessibility": "1.0.0",
@@ -67,15 +67,9 @@
       "name": "Open UPM",
       "url": "https://package.openupm.com",
       "scopes": [
+        "com.github-glitchenzo",
         "com.cysharp",
         "jp.hadashikick"
-      ]
-    },
-    {
-      "name": "Unity NuGet",
-      "url": "https://unitynuget-registry.azurewebsites.net",
-      "scopes": [
-        "org.nuget"
       ]
     }
   ]
