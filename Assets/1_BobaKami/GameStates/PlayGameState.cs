@@ -47,52 +47,62 @@ namespace BobaKami.GameStates
         {
             cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             tcs = new TaskCompletionSource<bool>();
-            
-            HandlePlayerDirectionInput();
-            ExecuteBeanLauncher();
-            HandlePlayerBiteInput();
+
+            // Complete tcs on cancellation even when no bean is in flight; otherwise Running
+            // would await forever (loops break on cancel, but only LaunchBean sets tcs).
+            var runTcs = tcs;
+            using var cancellationRegistration = cts.Token.Register(() => runTcs.TrySetResult(false));
+
+            _ = HandlePlayerDirectionInput();
+            _ = ExecuteBeanLauncher();
+            _ = HandlePlayerBiteInput();
 
             await tcs.Task;
             await Task.Yield();
-            
+
             return GameStateEnum.GameOver;
         }
 
-        private async void HandlePlayerDirectionInput()
+        // NOTE: The loops below are while-based (not recursive) and break on OperationCanceledException.
+        //       OCE can also originate from Application.exitCancellationToken (linked inside SOAR's
+        //       EventAsync), which fires *before* this state's own token on app quit / play mode exit —
+        //       continuing the loop there would spin on synchronously-thrown OCEs and overflow the stack.
+        private async Task HandlePlayerDirectionInput()
         {
-            try
+            while (cts != null && !Token.IsCancellationRequested)
             {
-                var direction = await playerDirectionInputProvider.WaitForDirectionInput(Token);
-                player.Direction = direction;
-                playerDirectionPresenter.Show(player.Direction);
+                try
+                {
+                    var direction = await playerDirectionInputProvider.WaitForDirectionInput(Token);
+                    player.Direction = direction;
+                    playerDirectionPresenter.Show(player.Direction);
+                }
+                catch (OperationCanceledException)
+                {
+                    // state's over
+                    playerDirectionPresenter.Show(DirectionEnum.Forward);
+                    break;
+                }
             }
-            catch (OperationCanceledException)
-            {
-                // state's over
-                playerDirectionPresenter.Show(DirectionEnum.Forward);
-            }
-            
-            if (cts == null || Token.IsCancellationRequested) return;
-            HandlePlayerDirectionInput(); // Recursive Call
         }
 
-        private async void ExecuteBeanLauncher()
+        private async Task ExecuteBeanLauncher()
         {
-            try
+            while (cts != null && !Token.IsCancellationRequested)
             {
-                LaunchBean();
-                await Task.Delay(beanLauncher.LaunchDelay, Token);
+                try
+                {
+                    _ = LaunchBean();
+                    await Task.Delay(beanLauncher.LaunchDelay, Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
             }
-            catch (OperationCanceledException)
-            {
-                // ignore
-            }
-            
-            if (cts == null || Token.IsCancellationRequested) return;
-            ExecuteBeanLauncher(); // Recursive Call
         }
 
-        private async void LaunchBean()
+        private async Task LaunchBean()
         {
             try
             {
@@ -119,27 +129,27 @@ namespace BobaKami.GameStates
             tcs.TrySetResult(true);
         }
 
-        private async void HandlePlayerBiteInput()
+        private async Task HandlePlayerBiteInput()
         {
-            try
+            while (cts != null && !Token.IsCancellationRequested)
             {
-                var bittenId = await playerBiteInputProvider.WaitForBite(Token);
-                if (beanLauncher.TryGetBean(bittenId, out var bittenBean))
+                try
                 {
-                    player.EatBean();
-                    playerHealthPresenter.Show(player.HealthPercentage);
-                    playerStatsPresenter.Show(player.GameStats);
-                    beanLauncher.UpdateLaunchRate(player.ComboCount);
-                    beanPresenter.Hide(bittenBean.Id);
+                    var bittenId = await playerBiteInputProvider.WaitForBite(Token);
+                    if (beanLauncher.TryGetBean(bittenId, out var bittenBean))
+                    {
+                        player.EatBean();
+                        playerHealthPresenter.Show(player.HealthPercentage);
+                        playerStatsPresenter.Show(player.GameStats);
+                        beanLauncher.UpdateLaunchRate(player.ComboCount);
+                        beanPresenter.Hide(bittenBean.Id);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
                 }
             }
-            catch (OperationCanceledException)
-            {
-                // ignore
-            }
-            
-            if (cts == null || Token.IsCancellationRequested) return;
-            HandlePlayerBiteInput(); // Recursive Call
         }
 
         public void Dispose()
