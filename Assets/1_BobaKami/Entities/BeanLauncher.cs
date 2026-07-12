@@ -8,23 +8,34 @@ namespace BobaKami
     public class BeanLauncher
     {
         public float launchRate = 2;
-        
+
         private readonly Dictionary<int, Bean> beans = new();
         private readonly Random rnd = new();
-        
+        private int nextId;
+
         public int LaunchedBeanCount => beans.Count;
         public int LaunchDelay => (int)Math.Floor(1000 / launchRate);
 
+        public BeanLauncher()
+        {
+        }
+
+        // Seeded constructor for deterministic tests.
+        internal BeanLauncher(int seed)
+        {
+            rnd = new Random(seed);
+        }
+
         public void Initialize()
         {
-            Bean.id = 0;
+            nextId = 0;
             beans.Clear();
         }
-        
+
         public Bean LaunchBean()
         {
             var rndVal = rnd.Next(0, 3) - 1;
-            var bean = new Bean((DirectionEnum)rndVal);
+            var bean = new Bean(nextId++, (DirectionEnum)rndVal);
             beans.Add(bean.Id, bean);
             return bean;
         }

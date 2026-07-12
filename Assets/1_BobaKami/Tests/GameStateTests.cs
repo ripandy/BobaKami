@@ -1,30 +1,25 @@
-using System.Threading;
 using System.Threading.Tasks;
 using BobaKami.GameStates;
 using NUnit.Framework;
 
 namespace BobaKami.Tests
 {
+    [Timeout(5000)]
     public class GameStateTests
     {
-        [TestCase(1)]
-        [TestCase(3)]
-        public async Task GameStates_ShouldRunAllStatesProperly(int playCount)
+        [Test]
+        public async Task GameStates_FullLoop_RestartsThenExits()
         {
-            using var cts = new CancellationTokenSource();
-            var token = cts.Token;
-            
-            // Entities
-            var player = new Player { hp = 100 };
-            var beanLauncher = new BeanLauncher { launchRate = 10 };
-            
-            // Game States
-            var playerPresenter = new DummyPlayerPresenter();
-            
-            var introGameState = new IntroGameState(player, beanLauncher, playerPresenter, playerPresenter, new DummyIntroPresenter());
+            var player = new Player();
+            var beanLauncher = new BeanLauncher(seed: 42) { launchRate = 100 };
 
-            var inputProvider = new DummyPlayerInputProvider(player, beanLauncher);
-            
+            var playerPresenter = new DummyPlayerPresenter();
+            var introPresenter = new InstantIntroPresenter();
+            var beanPresenter = new ScriptedBeanPresenter { AutoDrop = true }; // every run dies quickly
+            var inputProvider = new ScriptedInputProvider();
+            var gameOverPresenter = new ScriptedGameOverPresenter(true, false); // restart once, then exit
+
+            var introGameState = new IntroGameState(player, beanLauncher, playerPresenter, playerPresenter, introPresenter);
             using var playGameState = new PlayGameState(
                 player,
                 beanLauncher,
@@ -33,42 +28,23 @@ namespace BobaKami.Tests
                 playerPresenter,
                 inputProvider,
                 inputProvider,
-                new DummyBeanPresenter());
-            
-            var gameOverGameState = new GameOverGameState(player, new DummyGameOverPresenter());
+                beanPresenter);
+            var gameOverGameState = new GameOverGameState(player, gameOverPresenter);
 
-            // Run game states
-            var count = 0;
-            var nextState = GameStateEnum.Intro;
+            // Round 1: Intro -> GamePlay -> GameOver -> restart (Intro).
+            Assert.AreEqual(GameStateEnum.GamePlay, await introGameState.Running());
+            Assert.AreEqual(GameStateEnum.GameOver, await playGameState.Running());
+            Assert.IsFalse(player.IsAlive);
+            Assert.AreEqual(GameStateEnum.Intro, await gameOverGameState.Running());
 
-            while (count < playCount && nextState == GameStateEnum.Intro)
-            {
-                count++;
-                
-                nextState = await introGameState.Running(token);
-                Assert.AreEqual(GameStateEnum.GamePlay, nextState);
-                
-                nextState = await playGameState.Running(token);
-                Assert.AreEqual(GameStateEnum.GameOver, nextState);
+            // Round 2: Intro re-initializes, then GameOver exits (None).
+            Assert.AreEqual(GameStateEnum.GamePlay, await introGameState.Running());
+            Assert.IsTrue(player.IsAlive, "Intro must re-initialize the player.");
+            Assert.AreEqual(GameStateEnum.GameOver, await playGameState.Running());
+            Assert.AreEqual(GameStateEnum.None, await gameOverGameState.Running());
 
-                // For test purpose, set combo to 99 to simulate exit game instead of restarting.
-                if (count == 2)
-                {
-                    player.ComboCount = 99;
-                }
-                
-                nextState = await gameOverGameState.Running(token);
-                Assert.AreEqual(count == 2 ? GameStateEnum.None : GameStateEnum.Intro, nextState);
-            }
-            
-            if (playCount == 1)
-            {
-                Assert.AreEqual(count, playCount);
-            }
-            else
-            {
-                Assert.AreNotEqual(count, playCount);
-            }
+            Assert.AreEqual(2, introPresenter.ShowCount);
+            Assert.AreEqual(2, gameOverPresenter.ShownStats.Count);
         }
     }
 }

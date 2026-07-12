@@ -6,14 +6,12 @@ namespace BobaKami
 {
     public struct Bean
     {
-        internal static int id;
-        
         public int Id { get; }
         public DirectionEnum ThrowDirection { get; }
-        
-        public Bean(DirectionEnum throwDirection)
+
+        public Bean(int id, DirectionEnum throwDirection)
         {
-            Id = id++;
+            Id = id;
             ThrowDirection = throwDirection;
         }
     }
