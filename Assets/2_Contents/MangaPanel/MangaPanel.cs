@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using LitMotion;
@@ -15,17 +16,30 @@ namespace BobaKami.MainMenu
         [SerializeField] private string nextState = "Gameplay";
         [SerializeField] private Image[] mangaPanels;
 
-        private async void Start()
+        private async UniTaskVoid Start()
         {
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
             
             using var subscription = Observable.EveryValueChanged(this, _ => Input.anyKeyDown)
                 .Skip(1)
-                .Subscribe(_ => cts.Cancel());
+                .Subscribe(_ => CancelAndDispose());
             
-            await AnimatePanels(cts.Token).SuppressCancellationThrow();
-            
-            setNextStateEvent.Raise(nextState);
+            try
+            {
+                await AnimatePanels(cts.Token).SuppressCancellationThrow();
+                setNextStateEvent.Raise(nextState);
+            }
+            finally
+            {
+                CancelAndDispose();
+            }
+
+            void CancelAndDispose()
+            {
+                if (cts.IsCancellationRequested) return;
+                cts.Cancel();
+                cts.Dispose();
+            }
         }
 
         private async UniTask AnimatePanels(CancellationToken token = default)
