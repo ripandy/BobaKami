@@ -1,10 +1,10 @@
-using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using LitMotion;
-using R3;
 using Soar.Events;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Utilities;
 using UnityEngine.UI;
 using DelayType = LitMotion.DelayType;
 
@@ -20,9 +20,7 @@ namespace BobaKami.MainMenu
         {
             var cts = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
             
-            using var subscription = Observable.EveryValueChanged(this, _ => Input.anyKeyDown)
-                .Skip(1)
-                .Subscribe(_ => CancelAndDispose());
+            using var subscription = InputSystem.onAnyButtonPress.CallOnce(_ => CancelAndDispose());
             
             try
             {
