@@ -16,3 +16,4 @@ MonoBehaviour:
   valueEventType: 1
   autoResetValue: 1
   faceLookThreshold: 0.3
+  absoluteDirection: 1
