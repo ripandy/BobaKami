@@ -4,11 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-BobaKami is a Unity 6 (`6000.3.1f1`) face-detection game. (The name is a pun:
+BobaKami is a Unity 6 (`6000.5.x`) face-detection game. (The name is a pun:
 *boba* = tapioca, *kami* = god/bite.)
 The player uses ARKit face tracking to turn their head (aim direction) and bite
-(mouth blendshape) to eat falling boba beans before too many drop. Targets iOS/ARKit;
-also has WebGL and macOS build configs.
+(mouth blendshape) to eat falling boba beans before too many drop — or, since the
+input-mode work, plays by touch/pointer or keyboard/gamepad. Targets iOS/ARKit;
+also has WebGL and macOS build configs. Active Input Handling is **Input System only**
+(legacy `UnityEngine.Input` APIs throw at runtime).
+
+App identity (locked): productName `BobaKami`, companyName `WanderWonder Games`,
+bundle id `com.ripandy.bobakami` (final — `overrideDefaultApplicationIdentifier`
+must stay `1`, or Unity re-derives the id from companyName). companyName must not
+change once high-score persistence ships (it changes `persistentDataPath`).
 
 ## Project setup
 
@@ -25,17 +32,21 @@ edit them by hand. Edit code under `Assets/` and let Unity regenerate project fi
 
 ## Build & test
 
-Open in Unity Editor `6000.3.1f1`. Build scenes (in order): `Core` → `Title` → `Gameplay`.
+Open in Unity Editor `6000.5.x`. Build scenes (in order): `Core` → `Title` → `Gameplay`.
 
 Tests use Unity Test Framework (NUnit). The `BobaKami.Tests` assembly is **EditMode-only**
 (`Assets/1_BobaKami/Tests/`) and tests the pure-C# domain with no Unity runtime needed.
 
 - In-editor: run via **Window → General → Test Runner → EditMode**.
-- CLI (headless):
+- CLI (headless, fails if the project is open in an editor):
   ```
   Unity -batchmode -runTests -projectPath . -testPlatform EditMode -testResults results.xml -quit
   ```
 - Run a single test/class: add `-testFilter "BobaKami.Tests.<ClassOrMethod>"`.
+- **Fast out-of-Unity run:** domain + tests are fully UnityEngine-free, so a scratch
+  dotnet NUnit project compiling `Assets/1_BobaKami/**/*.cs` (exclude `AssemblyInfo.cs`,
+  LangVersion 9) runs the whole suite in <1 s with `dotnet test` — useful while the
+  editor is open. The suite is deterministic (scripted doubles, seeded launcher).
 
 ## Architecture
 
@@ -49,7 +60,11 @@ Pure C#. The asmdef sets `noEngineReferences: true` and `autoReferenced: false`,
 - `GameStates/` — `IGameState` (`ValueTask<GameStateEnum> Running(ct)`) and the
   concrete states (`IntroGameState`, `PlayGameState`, `GameOverGameState`). A state
   runs its logic and **returns the next state**. `PlayGameState` drives gameplay via
-  async recursive loops cancelled through a `CancellationTokenSource`.
+  concurrent `async Task` while-loops cancelled through a `CancellationTokenSource`;
+  loops must `break` on `OperationCanceledException` (never recurse/continue — OCE can
+  come from `Application.exitCancellationToken` linked inside SOAR's `EventAsync`, and
+  spinning on it stack-overflowed the editor at PlayMode end before). **No `async void`
+  anywhere; no UniTask in the domain** (adapters use `UniTaskVoid` for fire-and-forget).
 - `Interfaces/` — the **ports**: presenter interfaces (e.g. `IPlayerHealthPresenter`,
   `IBeanPresenter`) the domain pushes output to, and input-provider interfaces
   (e.g. `IPlayerDirectionInputProvider`, `IPlayerBiteInputProvider`) it awaits input from.
@@ -77,6 +92,34 @@ MonoBehaviours render by subscribing reactively, e.g. `HealthBarHUD` calls
   via `[Inject] Construct(...)` and runs the loop: repeatedly `await state.Running(ct)`,
   switch to the returned `GameStateEnum`, and on `None` execute the SOAR `resetAppCommand`.
 
+### Input architecture (Feature 2, implemented)
+All inputs funnel into two SOAR signals the domain awaits — `faceVector`
+(`FaceDirectionConverterVectorVariable : Variable<Vector2>`, x in [-1,1], absolute
+threshold ±0.3 → Left/Forward/Right) and `MouthOpenVariable : Variable<bool>`
+(true = mouth open, false = close/bite via `BiteInputHandler`).
+
+- **Action maps** (`BobaKamiInputActions.inputactions`, project-wide asset): `Pointer`
+  (`Point` = `<Pointer>/position` + `ScreenNormalize` processor, `Press` = `<Pointer>/press`)
+  and `KeyButton` (`Move` = WASD/arrows/gamepad stick+dpad, `Bite` = Space/buttonSouth),
+  plus `UI` for the EventSystem. The Unity-template `Player` map and the vestigial
+  `PlayerInput` object were deleted.
+- **Mode selection**: `InputModeController` (on `AlternativeInput` in `Gameplay.unity`)
+  reads `InputModeVariable` (`Auto/FaceTracking/Pointer/KeyButton/PointerAndKeyButton`,
+  default Auto) and toggles the `PointerInput` / `KeyButtonInput` GameObjects plus a
+  cross-scene `FaceTrackingEnabledVariable`. Auto → FaceTracking on ARKit iOS, else
+  Pointer+KeyButton both (per-device actions are inert when the device is absent).
+  `FaceTrackingAdapter` (Core scene) finds the `ARFaceManager` at runtime, publishes
+  `FaceTrackingAvailableVariable`, and enables/disables face tracking.
+- **Semantics**: pointer = absolute lane, Performed-only binder so the lane persists on
+  release (release = bite); keys/gamepad = **arcade stepping** via
+  `SteppedDirectionInputSource` (one lane-step per press, edge-triggered, syncs from
+  `PlayerDirectionVariable` so it composes with pointer input).
+- **Gotchas learned the hard way**: never bind a position control and buttons to the same
+  Value action (magnitude disambiguation starves the buttons); `Variable` holds state, so
+  sample `Value` before awaiting change events (position controls emit nothing at rest);
+  UniTask's `IObservable.ToUniTask()` awaits stream *completion* — use
+  `useFirstValue: true` on endless streams like `InputSystem.onAnyButtonPress`.
+
 ### App flow & networking
 - Scene/app-level state is handled by the external `com.ripandy.appstatemanagement`
   module (`AppStateEnum`: Splash → MainMenu → Gameplay) across the `Core`/`Title`/`Gameplay` scenes.
@@ -89,3 +132,62 @@ MonoBehaviours render by subscribing reactively, e.g. `HealthBarHUD` calls
   Variable/GameEvent in `Assets/2_Contents`, then bind it in `GameplayBindingInstaller`.
 - Reactive stack: R3, UniTask, LitMotion (tweening). Prefer UniTask/`ValueTask`
   for async over coroutines in new code, matching existing files.
+- New tests use the scripted doubles in `Assets/1_BobaKami/Tests/Dummies/`
+  (`ScriptedInputProvider`, `ScriptedBeanPresenter`, …): push-driven, no wall-clock
+  sleeps, and they **throw OCE on cancellation** to mirror the SOAR port contract.
+- Editing scenes/assets from outside Unity is fine for known GUIDs, but
+  `InputActionReference` sub-asset fileIDs are importer-hashed — those fields must be
+  wired in the editor.
+
+## Progress log & next steps (updated 2026-07-14)
+
+Roadmap source: `~/.claude/plans/temporal-hopping-sifakis.md` (feature numbers below refer
+to it). Hard deadline: **Tokyo Game Dungeon 13 booth, 2026-08-08**; App Store submission
+target ~Jul 25–28. Branch: `feature/touch_input`.
+
+### Done
+- **M0 — rebrand** (merged): BobaKami namespaces/assets/repo; identity locked (see Overview).
+- **Feature 1 — touch input** and **Feature 2 — input modes** (see Input architecture
+  above), including bug-fix rounds: PlayMode-end stack-overflow crash (async-void
+  recursion), `Running` hang on external cancellation, mouth-sprite dropping presses
+  during the bite window, trackpad unable to reach Forward, WASD starved by pointer
+  disambiguation, any-key skip under Input System-only (`MangaPanel` + module
+  `SplashScreen`, the latter in the **ModuleCollections repo**).
+- **Test overhaul**: 26 deterministic EditMode tests (entity unit tests + rebuilt state
+  tests + crash/hang regression tests), seeded `BeanLauncher`, instance bean ids,
+  `InternalsVisibleTo("BobaKami.Tests")`.
+- Editor-verified: pointer lanes, arcade key stepping, Space/click bite, splash/manga
+  any-key skip, repeated PlayMode stop without crash.
+
+### Immediate next (in order)
+1. **Commit** the pending work — agreed split: 5 commits in this repo (feat input modes /
+   fix converter / fix sprite / fix any-key / chore logo) + 3 in ModuleCollections
+   (fix splash any-key / fix ARKit blendshape API / chore hide flags). Discard the
+   play-mode-dirtied `HealthPercentageVariable.asset` first.
+2. **On-device iOS test**: Auto→Face with ARKit; force Pointer (face off, touch works);
+   clean app quit (crash fix); touch lane + tap-hold/release bite feel.
+3. **Splash art**: user swaps in a static splash image (`Dev_logo_Black.png` added as the
+   WanderWonder logo); `Core.unity`'s instance is renamed `SplashScreen`, still disabled.
+
+### Then — M1 (scoring), behind original schedule, booth-critical first
+4. **Feature 3 — score redesign** (domain + tests). Known issues to address there:
+   `GameStatsDto` carries *current* combo (0 at death — game-over shows `MaxComboCount`
+   separately); `BeanLauncher.UpdateLaunchRate` drops launchRate 10→1 at first combo
+   (curve `max(1, log2(combo)*0.5)`) — review during tuning (Feature 17).
+5. **Feature 4 — local high-score table** (SOAR `JsonableVariable`, top-N). ⚠ This ships
+   `persistentDataPath` — companyName/bundle id are frozen from here.
+6. **Feature 5 — new-record detection**, then M2: Main Menu (6), booth mode (7),
+   initials entry (8). Settings UI (13) later hosts the `InputModeVariable` override +
+   JSON persistence.
+
+### Parked / notes
+- `Player { hp = X }` object-initializer quirk: ctor runs `Initialize()` before the
+  initializer assigns `hp` — call `Initialize()` after setting custom hp (documented by
+  `PlayerTests.CustomHp_RequiresInitialize_ToTakeEffect`).
+- Incremental branch of `FaceDirectionConverterVectorVariable` (toggle off) is only for a
+  possible non-iOS streamed-face path (dormant `4_Network`); delete it if face stays
+  iOS-only.
+- `../ModuleCollections/ScreenTransition/Runtime/Samples/TestLoadingFade.cs` still uses
+  legacy Input (unused sample; would throw only if placed in a scene).
+- Remaining "Pyra's Lab" assets live only in the shared ModularScreens module — rename
+  when rebranding the module across projects.
