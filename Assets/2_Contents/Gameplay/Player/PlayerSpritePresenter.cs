@@ -22,11 +22,16 @@ namespace BobaKami.Gameplay
 
         private readonly ReactiveProperty<PlayerSpriteEnum> currentSprite = new();
         private IDisposable subscription;
+        private bool isMouthOpen;
 
         private void Start()
         {
             var s1 = playerDirection.Subscribe(OnPlayerDirection);
-            var s2 = mouthOpenEvent.AsObservable().SubscribeAwait(OnMouthOpen, AwaitOperation.Drop);
+            // The bite animation is uninterruptible (Drop), but the logical mouth state is
+            // tracked separately so the bite's end-state can respect a press that happened
+            // mid-animation (open instead of idle-closed).
+            var s2 = mouthOpenEvent.Subscribe(open => isMouthOpen = open);
+            var s2Await = mouthOpenEvent.AsObservable().SubscribeAwait(OnMouthOpen, AwaitOperation.Drop);
             
 #if UNITY_IOS && !UNITY_EDITOR
             var s3 = isEyeBlinkEvent.Subscribe(OnBlink);
@@ -37,7 +42,7 @@ namespace BobaKami.Gameplay
 
             var s4 = currentSprite.Subscribe(UpdateSprite);
             
-            subscription = new CompositeDisposable(s1, s2, s3, s4);
+            subscription = new CompositeDisposable(s1, s2, s2Await, s3, s4);
             
             currentSprite.Value = PlayerSpriteEnum.IdleMouthClosed;
         }
@@ -58,19 +63,34 @@ namespace BobaKami.Gameplay
         {
             if (opened)
             {
-                currentSprite.Value = (currentSprite.Value & ~PlayerSpriteEnum.MouthClose) | PlayerSpriteEnum.MouthOpen;
-                await UniTask.NextFrame(cancellationToken);
+                currentSprite.Value = ToMouthOpenSprite(currentSprite.Value);
+                return;
             }
-            
-            if (opened || currentSprite.Value.HasFlag(PlayerSpriteEnum.Bite)) return;
 
             currentSprite.Value = (currentSprite.Value &
                                    (PlayerSpriteEnum.Left | PlayerSpriteEnum.Right))
                                   | PlayerSpriteEnum.Bite;
-            
+
             await UniTask.Delay(TimeSpan.FromSeconds(mouthColliderEnableDuration), cancellationToken: cancellationToken);
-            
-            currentSprite.Value = (currentSprite.Value & ~PlayerSpriteEnum.Bite) | PlayerSpriteEnum.IdleMouthClosed;
+
+            // The bite window played out in full; land on whatever the mouth currently is.
+            // A press that arrived mid-bite was dropped by the animation handler, but
+            // isMouthOpen remembers it, so the sprite reopens instead of idling closed.
+            currentSprite.Value = isMouthOpen
+                ? ToMouthOpenSprite(currentSprite.Value)
+                : (currentSprite.Value & ~PlayerSpriteEnum.Bite) | PlayerSpriteEnum.IdleMouthClosed;
+        }
+
+        private static PlayerSpriteEnum ToMouthOpenSprite(PlayerSpriteEnum current)
+        {
+            // Clear Bite/MouthClose and guarantee an Idle/Blink base flag so the result
+            // always maps to a valid sprite in the collection.
+            var newSprite = (current & ~(PlayerSpriteEnum.MouthClose | PlayerSpriteEnum.Bite)) | PlayerSpriteEnum.MouthOpen;
+            if (!newSprite.HasFlag(PlayerSpriteEnum.Idle) && !newSprite.HasFlag(PlayerSpriteEnum.Blink))
+            {
+                newSprite |= PlayerSpriteEnum.Idle;
+            }
+            return newSprite;
         }
 
         private async ValueTask TryUpdateAutoBlink(CancellationToken token = default)
