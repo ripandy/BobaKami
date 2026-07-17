@@ -1,7 +1,6 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using LitMotion;
-using Soar.Events;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Utilities;
@@ -12,20 +11,22 @@ namespace BobaKami.MainMenu
 {
     public class MangaPanel : MonoBehaviour
     {
-        [SerializeField] private GameEvent<string> setNextStateEvent;
-        [SerializeField] private string nextState = "Gameplay";
+        [SerializeField] private GameObject titleScreenObject;
+        [SerializeField] private CanvasGroup mangaGroup;
         [SerializeField] private Image[] mangaPanels;
 
         private async UniTaskVoid Start()
         {
             var cts = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
-            
             using var subscription = InputSystem.onAnyButtonPress.CallOnce(_ => CancelAndDispose());
+            
+            titleScreenObject.SetActive(false);
             
             try
             {
                 await AnimatePanels(cts.Token).SuppressCancellationThrow();
-                setNextStateEvent.Raise(nextState);
+                titleScreenObject.SetActive(true);
+                gameObject.SetActive(false);
             }
             finally
             {
@@ -76,6 +77,10 @@ namespace BobaKami.MainMenu
                 .WithDelay(duration)
                 .Bind(alpha => UpdateAlpha(mangaPanels[5], alpha));
             
+            var panelBaseOut = LMotion.Create(1f, 0f, duration)
+                .WithEase(Ease.OutBack)
+                .Bind(alpha => mangaGroup.alpha = alpha);
+            
             await LSequence.Create()
                 .Append(panelBase)
                 .Append(panel1)
@@ -83,12 +88,13 @@ namespace BobaKami.MainMenu
                 .Join(panel2)
                 .Append(panel3)
                 .Append(panel4)
-                .AppendInterval(duration)
+                .AppendInterval(duration * 2)
+                .Append(panelBaseOut)
                 .Run()
                 .ToUniTask(CancelBehavior.Complete, cancellationToken: token);
         }
         
-        private void UpdateAlpha(Image panel, float alpha)
+        private static void UpdateAlpha(Image panel, float alpha)
         {
             var color = panel.color;
             color.a = alpha;
