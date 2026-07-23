@@ -386,9 +386,25 @@ PrefabInstance:
       value: SettingsMenuContainer
       objectReference: {fileID: 0}
     - target: {fileID: 5497179540541176408, guid: 8aea983893be24e099b9add1ee723c2d, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 11400000, guid: 97d90d4cd77ef4d5fa3df2429effdef5, type: 2}
+    - target: {fileID: 5497179540541176408, guid: 8aea983893be24e099b9add1ee723c2d, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: Show
+      objectReference: {fileID: 0}
+    - target: {fileID: 5497179540541176408, guid: 8aea983893be24e099b9add1ee723c2d, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: Ripandy.ModularScreens.MainMenu.ShowOverlayScreenCommand, ModularScreens
+      objectReference: {fileID: 0}
+    - target: {fileID: 5497179540541176408, guid: 8aea983893be24e099b9add1ee723c2d, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgument
       value: 
-      objectReference: {fileID: 624893404}
+      objectReference: {fileID: 624893403}
+    - target: {fileID: 5497179540541176408, guid: 8aea983893be24e099b9add1ee723c2d, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Transform, UnityEngine
+      objectReference: {fileID: 0}
     - target: {fileID: 7033022603718050205, guid: 8aea983893be24e099b9add1ee723c2d, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -477,11 +493,6 @@ PrefabInstance:
 --- !u!224 &624893403 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 7033022603718050205, guid: 8aea983893be24e099b9add1ee723c2d, type: 3}
-  m_PrefabInstance: {fileID: 624893402}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &624893404 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 2948855895147502227, guid: 8aea983893be24e099b9add1ee723c2d, type: 3}
   m_PrefabInstance: {fileID: 624893402}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &727060155

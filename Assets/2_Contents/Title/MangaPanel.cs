@@ -1,9 +1,9 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using LitMotion;
+using R3;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.Utilities;
 using UnityEngine.UI;
 using DelayType = LitMotion.DelayType;
 
@@ -22,7 +22,11 @@ namespace BobaKami.MainMenu
         private async UniTaskVoid Start()
         {
             var cts = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
-            using var subscription = InputSystem.onAnyButtonPress.CallOnce(_ => CancelAndDispose());
+            
+            // Skip the manga animation on any button press OR a touch tap.
+            using var subscription = AnyPressObservable()
+                .Take(1)
+                .Subscribe(_ => CancelAndDispose());
 
             standbyUI.SetActive(false);
 
@@ -40,7 +44,7 @@ namespace BobaKami.MainMenu
             // Hand off to StandbyUI, which waits for the start input, then step aside.
             standbyUI.SetActive(true);
             gameObject.SetActive(false);
-
+            
             void CancelAndDispose()
             {
                 if (cts.IsCancellationRequested) return;
@@ -107,6 +111,19 @@ namespace BobaKami.MainMenu
             var color = panel.color;
             color.a = alpha;
             panel.color = color;
+        }
+            
+        private static Observable<Unit> AnyPressObservable()
+        {
+            var anyButton = InputSystem.onAnyButtonPress
+                .ToObservable()
+                .AsUnitObservable();
+                
+            var touch = Observable.EveryUpdate()
+                .Where(_ => Touchscreen.current != null &&
+                            Touchscreen.current.press.wasPressedThisFrame);
+                
+            return anyButton.Merge(touch);
         }
     }
 }

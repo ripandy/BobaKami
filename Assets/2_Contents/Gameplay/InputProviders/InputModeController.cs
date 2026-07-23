@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using R3;
 using Soar.Variables;
 using UnityEngine;
@@ -50,13 +51,34 @@ namespace BobaKami.Gameplay
             keyButtonInput.SetActive(resolved is InputModeEnum.KeyButton or InputModeEnum.PointerAndKeyButton);
         }
 
-        internal static InputModeEnum ResolveAuto(bool faceTrackingAvailable)
+        private static InputModeEnum ResolveAuto(bool faceTrackingAvailable)
         {
 #if UNITY_IOS && !UNITY_EDITOR
             return faceTrackingAvailable ? InputModeEnum.FaceTracking : InputModeEnum.PointerAndKeyButton;
 #else
             return InputModeEnum.PointerAndKeyButton;
 #endif
+        }
+        
+        internal static IList<InputModeEnum> AvailableModes(bool faceTrackingAvailable)
+        {
+            var modes = new List<InputModeEnum>();
+#if UNITY_IOS
+            if (faceTrackingAvailable)
+                modes.Add(InputModeEnum.FaceTracking);
+#endif
+            
+            modes.Add(InputModeEnum.Pointer);
+            
+#if !UNITY_IOS && !UNITY_ANDROID || UNITY_EDITOR
+            modes.Add(InputModeEnum.KeyButton);
+            modes.Add(InputModeEnum.PointerAndKeyButton);
+#endif
+            
+            if (modes.Count > 1)
+                modes.Insert(0, InputModeEnum.Auto);
+            
+            return modes;
         }
 
         private void OnDestroy()

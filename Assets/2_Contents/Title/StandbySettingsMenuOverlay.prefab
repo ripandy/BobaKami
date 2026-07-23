@@ -473,6 +473,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: BobaKami.Contents::BobaKami.Gameplay.InputModeToggleButton
   inputMode: {fileID: 11400000, guid: 34ce02fac8044f5b84dc742a86461978, type: 2}
+  faceTrackingAvailable: {fileID: 11400000, guid: cd9ed57996124054a0f2ed32269f432a, type: 2}
   label: {fileID: 7207888826143189968}
   button: {fileID: 9149120551328609784}
 --- !u!1001 &2845341384560103712
@@ -483,6 +484,26 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 431348319222603158, guid: 1a3e8197d63984c88b5b83949ca4ccbe, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 11400000, guid: f2e67f926762e4f3885768beee9818d2, type: 2}
+    - target: {fileID: 431348319222603158, guid: 1a3e8197d63984c88b5b83949ca4ccbe, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: Show
+      objectReference: {fileID: 0}
+    - target: {fileID: 431348319222603158, guid: 1a3e8197d63984c88b5b83949ca4ccbe, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: Ripandy.ModularScreens.MainMenu.ShowOverlayScreenCommand, ModularScreens
+      objectReference: {fileID: 0}
+    - target: {fileID: 431348319222603158, guid: 1a3e8197d63984c88b5b83949ca4ccbe, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgument
+      value: 
+      objectReference: {fileID: 3909390233762145747}
+    - target: {fileID: 431348319222603158, guid: 1a3e8197d63984c88b5b83949ca4ccbe, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Transform, UnityEngine
+      objectReference: {fileID: 0}
     - target: {fileID: 1241972452711101683, guid: 1a3e8197d63984c88b5b83949ca4ccbe, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -717,7 +738,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4487831914100337939, guid: 1a3e8197d63984c88b5b83949ca4ccbe, type: 3}
       propertyPath: m_Name
-      value: SettingsMenuOverlay Variant
+      value: StandbySettingsMenuOverlay
       objectReference: {fileID: 0}
     - target: {fileID: 5265912579176933109, guid: 1a3e8197d63984c88b5b83949ca4ccbe, type: 3}
       propertyPath: m_AnchorMax.y
@@ -778,6 +799,18 @@ PrefabInstance:
     - target: {fileID: 7118382723307557124, guid: 1a3e8197d63984c88b5b83949ca4ccbe, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7285297399277458042, guid: 1a3e8197d63984c88b5b83949ca4ccbe, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 11400000, guid: 97d90d4cd77ef4d5fa3df2429effdef5, type: 2}
+    - target: {fileID: 7285297399277458042, guid: 1a3e8197d63984c88b5b83949ca4ccbe, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: Hide
+      objectReference: {fileID: 0}
+    - target: {fileID: 7285297399277458042, guid: 1a3e8197d63984c88b5b83949ca4ccbe, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: Ripandy.ModularScreens.MainMenu.ShowOverlayScreenCommand, ModularScreens
       objectReference: {fileID: 0}
     - target: {fileID: 7502019201667895050, guid: 1a3e8197d63984c88b5b83949ca4ccbe, type: 3}
       propertyPath: m_Name
