@@ -33,9 +33,7 @@ namespace BobaKami.Gameplay
         {
             subscription = faceVector.Subscribe(value =>
             {
-                Debug.Log($"[{GetType().Name}] Player direction changed to {value}");
                 if (playerDirectionOverlays.Length < 2) return;
-                Debug.Log($"[{GetType().Name}] SetVisible: {value}");
                 playerDirectionOverlays[0].SetActive(value.x < 0);
                 playerDirectionOverlays[1].SetActive(value.x > 0);
             });
