@@ -81,7 +81,8 @@ knowing it. Examples:
 
 MonoBehaviours render by subscribing reactively, e.g. `HealthBarHUD` calls
 `healthPercentageVariable.Subscribe(...)`. Folders are feature-grouped under
-`Gameplay/` (`Player`, `Boba`, `HUD`, `InputProviders`, `LevelIntro`, `GameOverDialog`).
+`Gameplay/` (`Player`, `Boba`, `HUD`, `InputProviders`, `LevelIntro`, `GameOverDialog`),
+plus `Title/` (manga intro, standby screen, settings/about overlay assets).
 
 ### Dependency injection — Doinject
 - `GameplayBindingInstaller : MonoBehaviour, IBindingInstaller` wires everything in
@@ -103,13 +104,34 @@ threshold ±0.3 → Left/Forward/Right) and `MouthOpenVariable : Variable<bool>`
   and `KeyButton` (`Move` = WASD/arrows/gamepad stick+dpad, `Bite` = Space/buttonSouth),
   plus `UI` for the EventSystem. The Unity-template `Player` map and the vestigial
   `PlayerInput` object were deleted.
-- **Mode selection**: `InputModeController` (on `AlternativeInput` in `Gameplay.unity`)
-  reads `InputModeVariable` (`Auto/FaceTracking/Pointer/KeyButton/PointerAndKeyButton`,
+- **Mode selection**: `InputModeController` (on `AlternativeInput`, now in **`Core.unity`**
+  so input sources are app-wide — needed for the Title standby's tap/bite start) reads
+  `InputModeVariable` (`Auto/FaceTracking/Pointer/KeyButton/PointerAndKeyButton`,
   default Auto) and toggles the `PointerInput` / `KeyButtonInput` GameObjects plus a
-  cross-scene `FaceTrackingEnabledVariable`. Auto → FaceTracking on ARKit iOS, else
+  cross-scene `FaceTrackingEnabledVariable` (it is the **single writer** of that flag —
+  drives the Title standby prompt). On `Start` it also **coerces** the persisted/default
+  mode to one legal on this platform via `InputModePolicy.Coerce`, so it — not the settings
+  UI — owns runtime mode state. Auto → FaceTracking on ARKit iOS, else
   Pointer+KeyButton both (per-device actions are inert when the device is absent).
-  `FaceTrackingAdapter` (Core scene) finds the `ARFaceManager` at runtime, publishes
-  `FaceTrackingAvailableVariable`, and enables/disables face tracking.
+  It re-applies on `FaceTrackingAvailableVariable` changes (same-scene init-order race
+  with `FaceTrackingAdapter`). `FaceTrackingAdapter` (Core scene) finds the
+  `ARFaceManager` at runtime, publishes `FaceTrackingAvailableVariable`, and
+  enables/disables face tracking.
+- **Mode policy**: all platform/`Auto` rules live in the pure static `InputModePolicy`
+  (`Resolve`/`ResolveAuto`/`AvailableModes`/`Coerce`) — the single home for the
+  `#if UNITY_IOS/ANDROID` matrix, shared by the controller, adapter and toggle button
+  without coupling them. Label wording is likewise split into `InputModeLabels.Format`.
+- **Mode switch UI**: `InputModeToggleButton` lives on `InputModeSwitchButton` inside
+  `Assets/2_Contents/Title/StandbySettingsMenuOverlay.prefab` (the Title settings overlay,
+  see App flow). On `Start` it asks `InputModePolicy.AvailableModes(faceTrackingAvailable)`
+  for the platform-legal modes — FaceTracking only on iOS *and* available, KeyButton /
+  PointerAndKeyButton only off-device (or in the editor), `Auto` prepended when more than
+  one mode exists — then cycles that list on click,
+  disabling the button when only one mode is legal. Labels are platform-worded: Pointer
+  reads "Touch Screen" on iOS/Android devices, "Mouse/Trackpad" elsewhere.
+  The old startup `modes[0]` reset was removed — mode coercion now lives in
+  `InputModeController`, so a (future) persisted choice survives startup as long as it is
+  platform-legal.
 - **Semantics**: pointer = absolute lane, Performed-only binder so the lane persists on
   release (release = bite); keys/gamepad = **arcade stepping** via
   `SteppedDirectionInputSource` (one lane-step per press, edge-triggered, syncs from
@@ -118,11 +140,39 @@ threshold ±0.3 → Left/Forward/Right) and `MouthOpenVariable : Variable<bool>`
   Value action (magnitude disambiguation starves the buttons); `Variable` holds state, so
   sample `Value` before awaiting change events (position controls emit nothing at rest);
   UniTask's `IObservable.ToUniTask()` awaits stream *completion* — use
-  `useFirstValue: true` on endless streams like `InputSystem.onAnyButtonPress`.
+  `useFirstValue: true` on endless streams like `InputSystem.onAnyButtonPress`;
+  **`InputSystem.onAnyButtonPress` does not fire for touches** (`Touchscreen.press` is a
+  synthetic control and is skipped), so every "any press to skip" gate must merge an
+  explicit `Touchscreen.current.press.wasPressedThisFrame` check — done in
+  `MangaPanel.AnyPressObservable()` and in the module `SplashScreen.OnAnyPressAsync`.
 
 ### App flow & networking
 - Scene/app-level state is handled by the external `com.ripandy.appstatemanagement`
   module (`AppStateEnum`: Splash → MainMenu → Gameplay) across the `Core`/`Title`/`Gameplay` scenes.
+- Title flow (`Title.unity` → `Canvas`; code + assets in `Assets/2_Contents/Title/`), split
+  across two components: `MangaPanel.cs` (on `MangaPanels`) **only animates** the panels —
+  any button press or touch skips it — then activates its `standbyUI` handoff object and
+  disables itself. `StandbyUI.cs` (on the `StandbyUI` object, which starts **inactive** so its
+  Start waits until the handoff) awaits a `MouthOpenVariable` open→close edge (face bite, tap
+  release, Space/pad release — the uniform bite semantic) and raises `SetNextStateEvent`
+  ("Gameplay"). A 0.5 s grace window (`ignoreStartUntil`) swallows the release edge left over
+  from the skip press and re-arms on any `InputModeVariable` change (so a mode switch's own tap
+  doesn't start the game). `standbyUI` must be a **sibling**, not a child, of `MangaPanel`
+  (MangaPanel disables its own GameObject on handoff).
+- Title UI under `StandbyUI`: the prompt text is driven with **no script** — a SOAR
+  `BoolUnityEventBinder` listening to `FaceTrackingEnabledVariable` sets the TMP text to
+  "Bite to Start!" (true) / "Tap to Start!" (false). Alongside it sit a `TapToStart` visual
+  and a `SettingsMenuContainer` instance (ModularScreens module prefab) whose button calls
+  `ShowSettingsCommand.Show(Transform)`.
+- Menus are ModularScreens `ShowOverlayScreenCommand` assets (`Command<Transform>`: lazily
+  instantiates its `overlayScreenPrefab`, re-parents + activates on `Show`, deactivates on
+  `Hide`), configured per game in `Assets/2_Contents/Title/`:
+  - `ShowSettingsCommand.asset` → local `StandbySettingsMenuOverlay.prefab` (holds
+    `InputModeSwitchButton` + `InputModeLabel`, i.e. the input-mode toggle).
+  - `ShowAboutMenuCommand.asset` → local `AboutMenu.prefab` (module AboutMenu nested under a
+    WanderWonder logo), fed by `CreditsInfoCollection.asset`.
+  Keeping these as **project-local prefabs/assets** is deliberate: the module ships the generic
+  screens, the game owns its content and wiring.
 - `Assets/4_Network` + `NetworkManagement` / `BlendShapeBroadcast*` handle MagicOnion
   client–server streaming of face blendshape data.
 
@@ -139,7 +189,7 @@ threshold ±0.3 → Left/Forward/Right) and `MouthOpenVariable : Variable<bool>`
   `InputActionReference` sub-asset fileIDs are importer-hashed — those fields must be
   wired in the editor.
 
-## Progress log & next steps (updated 2026-07-14)
+## Progress log & next steps (updated 2026-07-24)
 
 Roadmap source: `~/.claude/plans/temporal-hopping-sifakis.md` (feature numbers below refer
 to it). Hard deadline: **Tokyo Game Dungeon 13 booth, 2026-08-08**; App Store submission
@@ -158,27 +208,42 @@ target ~Jul 25–28. Branch: `feature/touch_input`.
   `InternalsVisibleTo("BobaKami.Tests")`.
 - Editor-verified: pointer lanes, arcade key stepping, Space/click bite, splash/manga
   any-key skip, repeated PlayMode stop without crash.
+- **Commits landed**: the agreed 5-commit split in this repo + 3 in ModuleCollections,
+  plus two on-device face-tracking fixes — `0c4b447` mirror face x (`invertX: 1` on
+  `BobaKamiFacePrefab`) and ModuleCollections `f5908b3` edge-trigger
+  `BlendShapeTriggerHandler` (was raising every ARFace update → bite sprite stuck in
+  bite state + mouth collider effectively always on).
+- **Device-verified**: splash static image (WanderWonder logo) + any-key skip;
+  MangaPanel any-key skip.
+- **Title standby + settings/about menus** (`e2658b1`, editor wiring done by user
+  2026-07-24): `Title.unity` Canvas rebuilt (MangaPanels + `StandbyUI` sibling with the
+  `BoolUnityEventBinder`-driven prompt, `SettingsMenuContainer`), `StandbySettingsMenuOverlay`
+  hosting the input-mode toggle, `AboutMenu` + `CreditsInfoCollection`,
+  `Show{Settings,AboutMenu}Command` assets, `2_Contents/MangaPanel/` → `2_Contents/Title/`.
+  `InputModeToggleButton` reworked to cycle `InputModeController.AvailableModes(...)`;
+  touch-press merged into MangaPanel's any-press skip.
 
 ### Immediate next (in order)
-1. **Commit** the pending work — agreed split: 5 commits in this repo (feat input modes /
-   fix converter / fix sprite / fix any-key / chore logo) + 3 in ModuleCollections
-   (fix splash any-key / fix ARKit blendshape API / chore hide flags). Discard the
-   play-mode-dirtied `HealthPercentageVariable.asset` first.
-2. **On-device iOS test**: Auto→Face with ARKit; force Pointer (face off, touch works);
-   clean app quit (crash fix); touch lane + tap-hold/release bite feel.
-3. **Splash art**: user swaps in a static splash image (`Dev_logo_Black.png` added as the
-   WanderWonder logo); `Core.unity`'s instance is renamed `SplashScreen`, still disabled.
+1. ⚠ **Uncommitted in the ModuleCollections repo**: `ModularScreens/Runtime/SplashScreen/
+   SplashScreen.cs` (the touch-press fix — `onAnyButtonPress` alone never fires for touches)
+   and a stray `AppStateManagement/.../AppStateLoadProgress.asset` value change (play-mode
+   noise, revert it). Commit the SplashScreen fix before the next device build.
+2. **On-device iOS re-test**: face mirror fix + single-bite sprite fix; Auto→Face with
+   ARKit; toggle Face ↔ Touch from the standby settings overlay mid-session; standby
+   tap/bite start; splash + manga touch skip; About menu; clean app quit.
 
 ### Then — M1 (scoring), behind original schedule, booth-critical first
-4. **Feature 3 — score redesign** (domain + tests). Known issues to address there:
+3. **Feature 3 — score redesign**  ← current work (domain + tests). Known issues to address there:
    `GameStatsDto` carries *current* combo (0 at death — game-over shows `MaxComboCount`
    separately); `BeanLauncher.UpdateLaunchRate` drops launchRate 10→1 at first combo
    (curve `max(1, log2(combo)*0.5)`) — review during tuning (Feature 17).
-5. **Feature 4 — local high-score table** (SOAR `JsonableVariable`, top-N). ⚠ This ships
+4. **Feature 4 — local high-score table** (SOAR `JsonableVariable`, top-N). ⚠ This ships
    `persistentDataPath` — companyName/bundle id are frozen from here.
-6. **Feature 5 — new-record detection**, then M2: Main Menu (6), booth mode (7),
-   initials entry (8). Settings UI (13) later hosts the `InputModeVariable` override +
-   JSON persistence.
+5. **Feature 5 — new-record detection**, then M2: Main Menu (6), booth mode (7),
+   initials entry (8). Settings UI (13) is now partly in place (`StandbySettingsMenuOverlay`
+   hosts the `InputModeVariable` override) and still needs JSON persistence — the startup
+   `modes[0]` reset was already removed (coercion now in `InputModeController` via
+   `InputModePolicy.Coerce`), so a saved legal choice will survive startup once persisted.
 
 ### Parked / notes
 - `Player { hp = X }` object-initializer quirk: ctor runs `Initialize()` before the
