@@ -1,4 +1,5 @@
 using System;
+using R3;
 using Soar.Variables;
 using UnityEngine;
 
@@ -32,23 +33,27 @@ namespace BobaKami.Gameplay
 
         private void Start()
         {
-            subscription = inputMode.Subscribe(Apply);
+            // Also re-apply when availability changes: this object and FaceTrackingAdapter
+            // both live in Core, so Auto may be resolved before availability is published.
+            var modeSubscription = inputMode.Subscribe(Apply);
+            var availabilitySubscription = faceTrackingAvailable.Subscribe(_ => Apply(inputMode.Value));
+            subscription = new CompositeDisposable(modeSubscription, availabilitySubscription);
             Apply(inputMode.Value);
         }
 
         private void Apply(InputModeEnum mode)
         {
-            var resolved = mode == InputModeEnum.Auto ? Resolve() : mode;
+            var resolved = mode == InputModeEnum.Auto ? ResolveAuto(faceTrackingAvailable.Value) : mode;
 
             faceTrackingEnabled.Value = resolved == InputModeEnum.FaceTracking;
             pointerInput.SetActive(resolved is InputModeEnum.Pointer or InputModeEnum.PointerAndKeyButton);
             keyButtonInput.SetActive(resolved is InputModeEnum.KeyButton or InputModeEnum.PointerAndKeyButton);
         }
 
-        private InputModeEnum Resolve()
+        internal static InputModeEnum ResolveAuto(bool faceTrackingAvailable)
         {
 #if UNITY_IOS && !UNITY_EDITOR
-            return faceTrackingAvailable.Value ? InputModeEnum.FaceTracking : InputModeEnum.PointerAndKeyButton;
+            return faceTrackingAvailable ? InputModeEnum.FaceTracking : InputModeEnum.PointerAndKeyButton;
 #else
             return InputModeEnum.PointerAndKeyButton;
 #endif
