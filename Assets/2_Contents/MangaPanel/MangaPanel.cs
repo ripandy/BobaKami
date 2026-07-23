@@ -11,27 +11,35 @@ namespace BobaKami.MainMenu
 {
     public class MangaPanel : MonoBehaviour
     {
-        [SerializeField] private GameObject titleScreenObject;
+        [Header("Manga Panel")]
         [SerializeField] private CanvasGroup mangaGroup;
         [SerializeField] private Image[] mangaPanels;
+
+        [Header("Handoff")]
+        [Tooltip("Activated once the manga animation completes or is skipped; StandbyUI takes over from there. Must be a sibling, not a child, of this object.")]
+        [SerializeField] private GameObject standbyUI;
 
         private async UniTaskVoid Start()
         {
             var cts = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
             using var subscription = InputSystem.onAnyButtonPress.CallOnce(_ => CancelAndDispose());
-            
-            titleScreenObject.SetActive(false);
-            
+
+            standbyUI.SetActive(false);
+
             try
             {
                 await AnimatePanels(cts.Token).SuppressCancellationThrow();
-                titleScreenObject.SetActive(true);
-                gameObject.SetActive(false);
             }
             finally
             {
                 CancelAndDispose();
             }
+
+            if (destroyCancellationToken.IsCancellationRequested) return;
+
+            // Hand off to StandbyUI, which waits for the start input, then step aside.
+            standbyUI.SetActive(true);
+            gameObject.SetActive(false);
 
             void CancelAndDispose()
             {
