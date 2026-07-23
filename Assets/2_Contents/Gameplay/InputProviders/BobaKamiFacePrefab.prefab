@@ -125,6 +125,8 @@ MonoBehaviour:
   faceTransform: {fileID: 11400000, guid: fee0944cf963844778cc1d722cc99488, type: 2}
   faceDirection2DVariable: {fileID: 11400000, guid: cdfd753ea791f4a17a6deb42391ec24f, type: 2}
   angleDegreeThreshold: 30
+  invertX: 1
+  invertY: 0
 --- !u!114 &3425468668657177460
 MonoBehaviour:
   m_ObjectHideFlags: 0
