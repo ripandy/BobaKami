@@ -1,10 +1,9 @@
-using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using LitMotion;
 using R3;
-using Soar.Events;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using DelayType = LitMotion.DelayType;
 
@@ -12,28 +11,40 @@ namespace BobaKami.MainMenu
 {
     public class MangaPanel : MonoBehaviour
     {
-        [SerializeField] private GameEvent<string> setNextStateEvent;
-        [SerializeField] private string nextState = "Gameplay";
+        [Header("Manga Panel")]
+        [SerializeField] private CanvasGroup mangaGroup;
         [SerializeField] private Image[] mangaPanels;
+
+        [Header("Handoff")]
+        [Tooltip("Activated once the manga animation completes or is skipped; StandbyUI takes over from there. Must be a sibling, not a child, of this object.")]
+        [SerializeField] private GameObject standbyUI;
 
         private async UniTaskVoid Start()
         {
             var cts = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
             
-            using var subscription = Observable.EveryValueChanged(this, _ => Input.anyKeyDown)
-                .Skip(1)
+            // Skip the manga animation on any button press OR a touch tap.
+            using var subscription = AnyPressObservable()
+                .Take(1)
                 .Subscribe(_ => CancelAndDispose());
-            
+
+            standbyUI.SetActive(false);
+
             try
             {
                 await AnimatePanels(cts.Token).SuppressCancellationThrow();
-                setNextStateEvent.Raise(nextState);
             }
             finally
             {
                 CancelAndDispose();
             }
 
+            if (destroyCancellationToken.IsCancellationRequested) return;
+
+            // Hand off to StandbyUI, which waits for the start input, then step aside.
+            standbyUI.SetActive(true);
+            gameObject.SetActive(false);
+            
             void CancelAndDispose()
             {
                 if (cts.IsCancellationRequested) return;
@@ -78,6 +89,10 @@ namespace BobaKami.MainMenu
                 .WithDelay(duration)
                 .Bind(alpha => UpdateAlpha(mangaPanels[5], alpha));
             
+            var panelBaseOut = LMotion.Create(1f, 0f, duration)
+                .WithEase(Ease.OutBack)
+                .Bind(alpha => mangaGroup.alpha = alpha);
+            
             await LSequence.Create()
                 .Append(panelBase)
                 .Append(panel1)
@@ -85,16 +100,30 @@ namespace BobaKami.MainMenu
                 .Join(panel2)
                 .Append(panel3)
                 .Append(panel4)
-                .AppendInterval(duration)
+                .AppendInterval(duration * 2)
+                .Append(panelBaseOut)
                 .Run()
                 .ToUniTask(CancelBehavior.Complete, cancellationToken: token);
         }
         
-        private void UpdateAlpha(Image panel, float alpha)
+        private static void UpdateAlpha(Image panel, float alpha)
         {
             var color = panel.color;
             color.a = alpha;
             panel.color = color;
+        }
+            
+        private static Observable<Unit> AnyPressObservable()
+        {
+            var anyButton = InputSystem.onAnyButtonPress
+                .ToObservable()
+                .AsUnitObservable();
+                
+            var touch = Observable.EveryUpdate()
+                .Where(_ => Touchscreen.current != null &&
+                            Touchscreen.current.press.wasPressedThisFrame);
+                
+            return anyButton.Merge(touch);
         }
     }
 }

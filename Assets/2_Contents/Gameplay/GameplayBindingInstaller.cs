@@ -1,6 +1,5 @@
 using BobaKami.Gameplay.HUD;
 using Doinject;
-using BobaKami;
 using BobaKami.GameStates;
 using BobaKami.Interfaces;
 using UnityEngine;

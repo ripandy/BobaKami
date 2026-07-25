@@ -9,11 +9,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9797cad7855a4d58a936e2ce7921a283, type: 3}
-  m_Name: FaceDirectionConverterVectorVariable
+  m_Script: {fileID: 11500000, guid: f60a616019a264726ac3ec7ec951e814, type: 3}
+  m_Name: FaceTrackingAvailableVariable
   m_EditorClassIdentifier: 
-  value: {x: 0, y: 0}
+  value: 0
   valueEventType: 1
   autoResetValue: 1
-  faceLookThreshold: 0.3
-  absoluteDirection: 1

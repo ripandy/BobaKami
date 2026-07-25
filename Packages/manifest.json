@@ -9,6 +9,7 @@
     "com.ripandy.debugtools": "file:./../../ModuleCollections/DebugTools",
     "com.ripandy.facedetectionhandler": "file:./../../ModuleCollections/FaceDetectionHandler",
     "com.ripandy.gridmanagement": "file:./../../ModuleCollections/GridManagement",
+    "com.ripandy.inputsystemhandler": "file:./../../ModuleCollections/InputSystemHandler",
     "com.ripandy.modularscreens": "file:./../../ModuleCollections/ModularScreens",
     "com.ripandy.screentransition": "file:./../../ModuleCollections/ScreenTransition",
     "com.ripandy.soar": "file:./../../SOAR",

@@ -82,6 +82,14 @@
         "com.ripandy.soar": "1.0.1"
       }
     },
+    "com.ripandy.inputsystemhandler": {
+      "version": "file:./../../ModuleCollections/InputSystemHandler",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.ripandy.soar": "1.0.1"
+      }
+    },
     "com.ripandy.modularscreens": {
       "version": "file:./../../ModuleCollections/ModularScreens",
       "depth": 0,
