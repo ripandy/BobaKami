@@ -20,13 +20,12 @@ namespace BobaKami.Gameplay
 
         private void Start()
         {
-            modes = InputModeController.AvailableModes(faceTrackingAvailable.Value);
+            modes = InputModePolicy.AvailableModes(faceTrackingAvailable.Value);
             
             var modeSubscription = inputMode.Subscribe(Refresh);
             var buttonSubscription = button.OnClickAsObservable().Subscribe(_ => ToggleNext());
             subscription = new CompositeDisposable(modeSubscription, buttonSubscription);
             
-            inputMode.Value = modes[0];
             button.interactable = modes.Count > 1;
             Refresh(inputMode.Value);
         }
@@ -39,24 +38,8 @@ namespace BobaKami.Gameplay
 
         private void Refresh(InputModeEnum newInputMode)
         {
-            label.text = newInputMode switch
-            {
-                InputModeEnum.Auto => "Auto",
-                InputModeEnum.FaceTracking => "Face Tracking",
-                InputModeEnum.Pointer => PointerText,
-                InputModeEnum.KeyButton => "Key Button",
-                InputModeEnum.PointerAndKeyButton => $"{PointerText} And Key Button",
-                _ => throw new ArgumentOutOfRangeException(nameof(newInputMode), newInputMode, null)
-            };
+            label.text = newInputMode.ToLabelString();
         }
-
-        private static string PointerText =>
-#if (UNITY_IOS || UNITY_ANDROID) && !UNITY_EDITOR
-            "Touch Screen";
-#else
-            "Mouse/Trackpad";
-#endif
-        
 
         private void OnDestroy()
         {

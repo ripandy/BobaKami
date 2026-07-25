@@ -17,7 +17,7 @@ namespace BobaKami.Gameplay
     public class FaceTrackingAdapter : MonoBehaviour
     {
         [Header("Input")]
-        [SerializeField] private Variable<bool> faceTrackingEnabled;
+        [SerializeField] private Variable<InputModeEnum> inputMode;
 
         [Header("Output")]
         [SerializeField] private Variable<bool> faceTrackingAvailable;
@@ -33,14 +33,17 @@ namespace BobaKami.Gameplay
             SubsystemManager.GetSubsystemDescriptors(descriptors);
             faceTrackingAvailable.Value = faceManager != null && descriptors.Count > 0;
 
-            subscription = faceTrackingEnabled.Subscribe(SetFaceTrackingActive);
-            SetFaceTrackingActive(faceTrackingEnabled.Value);
+            subscription = inputMode.Subscribe(SetFaceTrackingActive);
+            SetFaceTrackingActive(inputMode);
         }
 
-        private void SetFaceTrackingActive(bool active)
+        private void SetFaceTrackingActive(InputModeEnum mode)
         {
             if (faceManager == null) return;
 
+            var resolved = InputModePolicy.Resolve(mode, faceTrackingAvailable.Value);
+            var active = resolved == InputModeEnum.FaceTracking;
+            
             faceManager.enabled = active && faceTrackingAvailable.Value;
 
             foreach (var face in faceManager.trackables)

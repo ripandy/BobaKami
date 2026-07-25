@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using R3;
 using Soar.Variables;
 using UnityEngine;
@@ -7,15 +6,15 @@ using UnityEngine;
 namespace BobaKami.Gameplay
 {
     /// <summary>
-    /// Activates the input sources for the selected mode:
-    /// - FaceTracking: raises the cross-scene faceTrackingEnabled flag consumed by
-    ///   FaceTrackingAdapter in Core; pointer/key sources stay off.
-    /// - Pointer: screen-normalized pointer input (touch, mouse, or pen via the
-    ///   Input System's Pointer layout).
+    /// Applies the selected input mode by activating its input-source GameObjects and
+    /// raising the cross-scene <c>faceTrackingEnabled</c> flag (read by FaceTrackingAdapter
+    /// and the Title standby prompt). The platform/Auto rules live in <see cref="InputModePolicy"/>.
+    /// - FaceTracking: only the face flag is raised; pointer/key sources stay off.
+    /// - Pointer: screen-normalized pointer input (touch, mouse, or pen).
     /// - KeyButton: discrete direction + button input (keyboard, gamepad).
     /// - PointerAndKeyButton: both non-face sources at once (desktop default).
-    /// Auto resolves to FaceTracking when available on iOS, else PointerAndKeyButton —
-    /// pointer and key/button actions are per-device and inert when the device is absent.
+    /// On start it coerces the persisted/default mode to one legal on this platform, so it
+    /// owns the runtime mode state rather than the settings UI.
     /// </summary>
     public class InputModeController : MonoBehaviour
     {
@@ -39,46 +38,19 @@ namespace BobaKami.Gameplay
             var modeSubscription = inputMode.Subscribe(Apply);
             var availabilitySubscription = faceTrackingAvailable.Subscribe(_ => Apply(inputMode.Value));
             subscription = new CompositeDisposable(modeSubscription, availabilitySubscription);
-            Apply(inputMode.Value);
+
+            // Owns the runtime mode state: correct an illegal persisted/default mode once
+            // (assigning triggers Apply through the subscription above).
+            inputMode.Value = InputModePolicy.Coerce(inputMode.Value, faceTrackingAvailable.Value);
         }
 
         private void Apply(InputModeEnum mode)
         {
-            var resolved = mode == InputModeEnum.Auto ? ResolveAuto(faceTrackingAvailable.Value) : mode;
+            var resolved = InputModePolicy.Resolve(mode, faceTrackingAvailable.Value);
 
-            faceTrackingEnabled.Value = resolved == InputModeEnum.FaceTracking;
             pointerInput.SetActive(resolved is InputModeEnum.Pointer or InputModeEnum.PointerAndKeyButton);
             keyButtonInput.SetActive(resolved is InputModeEnum.KeyButton or InputModeEnum.PointerAndKeyButton);
-        }
-
-        private static InputModeEnum ResolveAuto(bool faceTrackingAvailable)
-        {
-#if UNITY_IOS && !UNITY_EDITOR
-            return faceTrackingAvailable ? InputModeEnum.FaceTracking : InputModeEnum.PointerAndKeyButton;
-#else
-            return InputModeEnum.PointerAndKeyButton;
-#endif
-        }
-        
-        internal static IList<InputModeEnum> AvailableModes(bool faceTrackingAvailable)
-        {
-            var modes = new List<InputModeEnum>();
-#if UNITY_IOS
-            if (faceTrackingAvailable)
-                modes.Add(InputModeEnum.FaceTracking);
-#endif
-            
-            modes.Add(InputModeEnum.Pointer);
-            
-#if !UNITY_IOS && !UNITY_ANDROID || UNITY_EDITOR
-            modes.Add(InputModeEnum.KeyButton);
-            modes.Add(InputModeEnum.PointerAndKeyButton);
-#endif
-            
-            if (modes.Count > 1)
-                modes.Insert(0, InputModeEnum.Auto);
-            
-            return modes;
+            faceTrackingEnabled.Value = resolved == InputModeEnum.FaceTracking;
         }
 
         private void OnDestroy()
