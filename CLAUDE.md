@@ -209,10 +209,10 @@ target ~Jul 25–28. Branch: `feature/touch_input`.
 - Editor-verified: pointer lanes, arcade key stepping, Space/click bite, splash/manga
   any-key skip, repeated PlayMode stop without crash.
 - **Commits landed**: the agreed 5-commit split in this repo + 3 in ModuleCollections,
-  plus two on-device face-tracking fixes — `0c4b447` mirror face x (`invertX: 1` on
-  `BobaKamiFacePrefab`) and ModuleCollections `f5908b3` edge-trigger
-  `BlendShapeTriggerHandler` (was raising every ARFace update → bite sprite stuck in
-  bite state + mouth collider effectively always on).
+  plus the on-device face-mirror fix `0c4b447` (`invertX: 1` on `BobaKamiFacePrefab`).
+  NOTE: an earlier log claimed a `f5908b3` edge-trigger fix for `BlendShapeTriggerHandler`
+  had landed — it never did (its history was always every-frame raise). That defect is the
+  one fixed on `fix/mouth_bite_auto_reset`, see below.
 - **Device-verified**: splash static image (WanderWonder logo) + any-key skip;
   MangaPanel any-key skip.
 - **Title standby + settings/about menus** (`e2658b1`, editor wiring done by user
@@ -224,11 +224,21 @@ target ~Jul 25–28. Branch: `feature/touch_input`.
   touch-press merged into MangaPanel's any-press skip.
 
 ### Immediate next (in order)
+0. **Mouth-bite auto-reset fix** (branch `fix/mouth_bite_auto_reset`, code done 2026-07-25):
+   `BlendShapeTriggerHandler` (ModuleCollections) raised `triggerFlagEvent` on *every*
+   `ARFace.updated`, and SOAR's `GameEvent.Raise` never dedupes (the `Variable.Value`-setter
+   guard is bypassed; `MouthOpenVariable` is `OnAssign` regardless). So `MouthOpenVariable`
+   emitted `false` ~60×/s while closed, and `PlayerSpritePresenter.OnMouthOpen`'s
+   `AwaitOperation.Drop` bite window re-triggered every frame → sprite pinned in Bite, mouth
+   collider permanently re-armed, and (latent) Title `StandbyUI` auto-advancing right after its
+   grace window. Fix: **edge-trigger at source** — track `bool? lastTriggered`, raise only on
+   change (matches `BlendShapeCollectionTriggerHandler`, which already uses `.Value =`). Needs
+   an on-device confirm, then commit in the ModuleCollections repo.
 1. ⚠ **Uncommitted in the ModuleCollections repo**: `ModularScreens/Runtime/SplashScreen/
    SplashScreen.cs` (the touch-press fix — `onAnyButtonPress` alone never fires for touches)
    and a stray `AppStateManagement/.../AppStateLoadProgress.asset` value change (play-mode
    noise, revert it). Commit the SplashScreen fix before the next device build.
-2. **On-device iOS re-test**: face mirror fix + single-bite sprite fix; Auto→Face with
+2. **On-device iOS re-test**: face mirror fix + mouth-bite auto-reset fix; Auto→Face with
    ARKit; toggle Face ↔ Touch from the standby settings overlay mid-session; standby
    tap/bite start; splash + manga touch skip; About menu; clean app quit.
 
