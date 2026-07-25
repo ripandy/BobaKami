@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: MouthOpenVariable
   m_EditorClassIdentifier: 
   value: 0
-  valueEventType: 1
+  valueEventType: 0
   autoResetValue: 1
