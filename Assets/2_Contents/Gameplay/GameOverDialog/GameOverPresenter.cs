@@ -73,7 +73,7 @@ namespace BobaKami.Gameplay
             const float delayFactor = 0.1f;
             
             scoreText.text = stats.Score.ToString();
-            comboText.text = stats.Combo.ToString();
+            comboText.text = stats.MaxCombo.ToString();
 
             var tasks = animationObjects.Select((obj, i) =>
             {
