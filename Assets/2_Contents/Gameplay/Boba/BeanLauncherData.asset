@@ -14,5 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   value:
     launchRate: 1
+    initialLaunchRate: 1
   valueEventType: 0
   autoResetValue: 1
