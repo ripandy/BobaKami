@@ -11,6 +11,7 @@ namespace BobaKami
         
         internal int CurrentHp { get; set; }
         internal int BeanEatenCount { get; set; }
+        public int Score { get; internal set; }
 
         private int comboCount;
         public int ComboCount
@@ -38,12 +39,15 @@ namespace BobaKami
             Initialize();
         }
 
-        public GameStatsDto GameStats => new(BeanEatenCount, ComboCount);
+        public GameStatsDto GameStats =>
+            new(Score, ComboCount, MaxComboCount, BeanEatenCount, ScoreRules.MultiplierFor(ComboCount));
 
         internal void Initialize()
         {
             CurrentHp = hp;
             BeanEatenCount = 0;
+            Score = 0;
+            MaxComboCount = 0;
             ComboCount = 0;
             Direction = DirectionEnum.Forward;
         }
@@ -52,6 +56,7 @@ namespace BobaKami
         {
             BeanEatenCount++;
             ComboCount++;
+            Score += ScoreRules.GetScore(ComboCount);
             CurrentHp = Math.Min(CurrentHp + BeanHeal, hp);
         }
 

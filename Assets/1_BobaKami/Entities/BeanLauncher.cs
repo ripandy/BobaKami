@@ -9,6 +9,10 @@ namespace BobaKami
     {
         public float launchRate = 2;
 
+        // Starting pace, restored on Initialize so a restart doesn't inherit the previous run's
+        // speed. Serialized as a designer knob (see BeanLauncherData.asset); curve tuning is Feature 17.
+        public float initialLaunchRate = 1;
+
         private readonly Dictionary<int, Bean> beans = new();
         private readonly Random rnd = new();
         private int nextId;
@@ -30,6 +34,7 @@ namespace BobaKami
         {
             nextId = 0;
             beans.Clear();
+            launchRate = initialLaunchRate;
         }
 
         public Bean LaunchBean()
@@ -50,9 +55,11 @@ namespace BobaKami
             beans.Remove(id);
         }
 
-        public void UpdateLaunchRate(int comboCount)
+        // Fed the run's peak combo (not current) so pace never falls back after a hit.
+        // Clamped to initialLaunchRate — the game never gets slower than its starting pace.
+        public void UpdateLaunchRate(int peakCombo)
         {
-            launchRate = (float)Math.Max(1, Math.Log(comboCount, 2) * 0.5f);
+            launchRate = (float)Math.Max(initialLaunchRate, Math.Log(peakCombo, 2) * 0.5f);
         }
     }
 }
