@@ -9,24 +9,24 @@ namespace BobaKami.Gameplay
     public class GameplayBindingInstaller : MonoBehaviour, IBindingInstaller
     {
         [SerializeField] private PlayerData playerData;
-        [SerializeField] private BeanLauncherData beanLauncherData;
+        [SerializeField] private BobaLauncherData bobaLauncherData;
 
         [SerializeField] private HealthPercentageVariable healthPercentageVariable;
         [SerializeField] private GameStatsVariable gameStatsVariable;
         
-        [SerializeField] private BeanPresenter beanPresenter;
+        [SerializeField] private BobaPresenter bobaPresenter;
         [SerializeField] private IntroPresenter introPresenter;
         [SerializeField] private GameOverPresenter gameOverPresenter;
 
         [SerializeField] private PlayerDirectionVariable playerDirectionVariable;
         [SerializeField] private FaceDirectionConverterVectorVariable faceDirectionConverterVectorVariable;
-        [SerializeField] private BittenBeanGameEvent bittenBeanGameEvent;
+        [SerializeField] private BittenBobaGameEvent bittenBobaGameEvent;
 
         public void Install(DIContainer container, IContextArg contextArg)
         {
             // Domain
             container.BindFromInstance(playerData.Value);
-            container.BindFromInstance(beanLauncherData.Value);
+            container.BindFromInstance(bobaLauncherData.Value);
             container.BindSingleton<IntroGameState>();
             container.BindSingleton<PlayGameState>();
             container.BindSingleton<GameOverGameState>();
@@ -35,13 +35,13 @@ namespace BobaKami.Gameplay
             container.BindFromInstance<IPlayerHealthPresenter>(healthPercentageVariable);
             container.BindFromInstance<IPlayerStatsPresenter>(gameStatsVariable);
             container.BindFromInstance<IPlayerDirectionPresenter>(playerDirectionVariable);
-            container.BindFromInstance<IBeanPresenter>(beanPresenter);
+            container.BindFromInstance<IBobaPresenter>(bobaPresenter);
             container.BindFromInstance<IIntroPresenter>(introPresenter);
             container.BindFromInstance<IGameOverPresenter>(gameOverPresenter);
 
             // Input Providers
             container.BindFromInstance<IPlayerDirectionInputProvider>(faceDirectionConverterVectorVariable);
-            container.BindFromInstance<IPlayerBiteInputProvider>(bittenBeanGameEvent);
+            container.BindFromInstance<IPlayerBiteInputProvider>(bittenBobaGameEvent);
         }
     }
 }

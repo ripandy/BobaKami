@@ -6,19 +6,19 @@ using BobaKami.Interfaces;
 namespace BobaKami.Tests
 {
     /// <summary>
-    /// Deterministic bean presenter double. With AutoDrop, every shown bean "drops" immediately
-    /// (damage path). Otherwise beans stay in flight until the test calls DropBean(id) or the
-    /// game bites them (Hide resolves the bean as eaten). WaitForShown lets tests synchronize
-    /// on a specific bean being launched. Cancellation propagates as OperationCanceledException.
+    /// Deterministic boba presenter double. With AutoDrop, every shown boba "drops" immediately
+    /// (damage path). Otherwise bobas stay in flight until the test calls DropBoba(id) or the
+    /// game bites them (Hide resolves the boba as eaten). WaitForShown lets tests synchronize
+    /// on a specific boba being launched. Cancellation propagates as OperationCanceledException.
     /// </summary>
-    internal class ScriptedBeanPresenter : IBeanPresenter
+    internal class ScriptedBobaPresenter : IBobaPresenter
     {
         private readonly Dictionary<int, TaskCompletionSource<bool>> inFlight = new();
         private readonly Dictionary<int, TaskCompletionSource<bool>> shownSignals = new();
-        private readonly List<int> hiddenBeans = new();
+        private readonly List<int> hiddenBobas = new();
 
         public bool AutoDrop { get; set; }
-        public IReadOnlyList<int> HiddenBeans => hiddenBeans;
+        public IReadOnlyList<int> HiddenBobas => hiddenBobas;
 
         public async ValueTask<bool> Show(int id, DirectionEnum throwDirection, CancellationToken cancellationToken = default)
         {
@@ -37,11 +37,11 @@ namespace BobaKami.Tests
 
         public void Hide(int id)
         {
-            hiddenBeans.Add(id);
+            hiddenBobas.Add(id);
             GetSignal(inFlight, id).TrySetResult(false); // eaten/hidden -> not dropped
         }
 
-        public void DropBean(int id)
+        public void DropBoba(int id)
         {
             GetSignal(inFlight, id).TrySetResult(true);
         }

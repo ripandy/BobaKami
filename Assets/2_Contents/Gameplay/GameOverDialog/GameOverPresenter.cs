@@ -23,6 +23,7 @@ namespace BobaKami.Gameplay
         [SerializeField] private GameObject[] playerDirectionOverlays;
         [SerializeField] private Button[] buttons;
         [SerializeField] private TMP_Text scoreText;
+        [SerializeField] private TMP_Text bobaCountText;
         [SerializeField] private TMP_Text comboText;
         [SerializeField] private CanvasGroup canvasGroup;
         [SerializeField] private float fadeDuration = 0.5f;
@@ -73,7 +74,8 @@ namespace BobaKami.Gameplay
             const float delayFactor = 0.1f;
             
             scoreText.text = stats.Score.ToString();
-            comboText.text = stats.Combo.ToString();
+            bobaCountText.text = stats.BobaEaten.ToString();
+            comboText.text = stats.MaxCombo.ToString();
 
             var tasks = animationObjects.Select((obj, i) =>
             {

@@ -102,7 +102,7 @@ GameObject:
   - component: {fileID: 3404773227001224498}
   m_Layer: 0
   m_Name: Boba
-  m_TagString: Bean
+  m_TagString: Boba
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

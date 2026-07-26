@@ -13,10 +13,12 @@ namespace BobaKami.Gameplay.HUD
     {
         [SerializeField] private GameStatsVariable gameStatsVariable;
         [SerializeField] private TMP_Text scoreText;
+        [SerializeField] private TMP_Text bobaCountText;
 
         [SerializeField] private GameObject comboParent;
         [SerializeField] private TMP_Text comboValue;
         [SerializeField] private TMP_Text comboLabel;
+        [SerializeField] private TMP_Text multiplierText;
         [SerializeField] private Image effectImage;
 
         private CancellationTokenSource cts;
@@ -27,27 +29,36 @@ namespace BobaKami.Gameplay.HUD
         {
             subscription = gameStatsVariable.Subscribe(UpdateStats);
             UpdateScore(0);
-            ShowCombo(0).Forget();
+            UpdateBobaCount(0);
+            ShowCombo(0, 1).Forget();
         }
 
         private void UpdateStats(GameStatsDto stats)
         {
             UpdateScore(stats.Score);
-            ShowCombo(stats.Combo).Forget();
+            UpdateBobaCount(stats.BobaEaten);
+            ShowCombo(stats.Combo, stats.Multiplier).Forget();
         }
-        
+
         private void UpdateScore(int score)
         {
             scoreText.text = score.ToString();
         }
-        
-        private async UniTaskVoid ShowCombo(int combo)
+
+        // Boba count — how many the player has eaten this run, shown next to the boba icon.
+        private void UpdateBobaCount(int bobaCount)
+        {
+            bobaCountText.text = bobaCount.ToString();
+        }
+
+        private async UniTaskVoid ShowCombo(int combo, int multiplier)
         {
             const int minCombo = 5;
-            
+
             comboValue.text = combo < minCombo ? string.Empty : combo.ToString();
+            multiplierText.text = multiplier.ToString();
             comboParent.SetActive(combo >= minCombo);
-            
+
             if (combo < minCombo) return;
             
             RefreshToken();
@@ -68,6 +79,7 @@ namespace BobaKami.Gameplay.HUD
             {
                 comboValue.color = color;
                 comboLabel.color = color;
+                multiplierText.color = color;
                 effectImage.color = color;
             }
 

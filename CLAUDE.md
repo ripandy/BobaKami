@@ -56,7 +56,9 @@ that knows nothing about Unity, and Unity-specific code adapts to it.
 ### `Assets/1_BobaKami` — domain (`BobaKami` assembly)
 Pure C#. The asmdef sets `noEngineReferences: true` and `autoReferenced: false`, so
 **this layer must never reference UnityEngine.**
-- `Entities/` — `Player`, `Bean`, `BeanLauncher`, and the `GameStateEnum` / `AppStateEnum`.
+- `Entities/` — `Player`, `Boba`, `BobaLauncher`, and the `GameStateEnum` / `AppStateEnum`.
+  (The falling object is `Boba`, not "Bean" — the domain uses the game's own ubiquitous
+  language; "Bean" was a pre-rebrand placeholder, fully renamed 2026-07-25.)
 - `GameStates/` — `IGameState` (`ValueTask<GameStateEnum> Running(ct)`) and the
   concrete states (`IntroGameState`, `PlayGameState`, `GameOverGameState`). A state
   runs its logic and **returns the next state**. `PlayGameState` drives gameplay via
@@ -66,7 +68,7 @@ Pure C#. The asmdef sets `noEngineReferences: true` and `autoReferenced: false`,
   spinning on it stack-overflowed the editor at PlayMode end before). **No `async void`
   anywhere; no UniTask in the domain** (adapters use `UniTaskVoid` for fire-and-forget).
 - `Interfaces/` — the **ports**: presenter interfaces (e.g. `IPlayerHealthPresenter`,
-  `IBeanPresenter`) the domain pushes output to, and input-provider interfaces
+  `IBobaPresenter`) the domain pushes output to, and input-provider interfaces
   (e.g. `IPlayerDirectionInputProvider`, `IPlayerBiteInputProvider`) it awaits input from.
 - `DataTransferObjects/`, `Tests/`.
 
@@ -76,7 +78,7 @@ framework). The recurring pattern: a SOAR `Variable<T>` / `GameEvent<T>` also
 implements a domain interface, so the domain talks to a ScriptableObject without
 knowing it. Examples:
 - `HealthPercentageVariable : Variable<float>, IPlayerHealthPresenter`
-- `BittenBeanGameEvent : GameEvent<int>, IPlayerBiteInputProvider`
+- `BittenBobaGameEvent : GameEvent<int>, IPlayerBiteInputProvider`
 - `PlayerData : JsonableVariable<Player>` (serialized domain state as a SO asset)
 
 MonoBehaviours render by subscribing reactively, e.g. `HealthBarHUD` calls
@@ -183,13 +185,13 @@ threshold ±0.3 → Left/Forward/Right) and `MouthOpenVariable : Variable<bool>`
 - Reactive stack: R3, UniTask, LitMotion (tweening). Prefer UniTask/`ValueTask`
   for async over coroutines in new code, matching existing files.
 - New tests use the scripted doubles in `Assets/1_BobaKami/Tests/Dummies/`
-  (`ScriptedInputProvider`, `ScriptedBeanPresenter`, …): push-driven, no wall-clock
+  (`ScriptedInputProvider`, `ScriptedBobaPresenter`, …): push-driven, no wall-clock
   sleeps, and they **throw OCE on cancellation** to mirror the SOAR port contract.
 - Editing scenes/assets from outside Unity is fine for known GUIDs, but
   `InputActionReference` sub-asset fileIDs are importer-hashed — those fields must be
   wired in the editor.
 
-## Progress log & next steps (updated 2026-07-24)
+## Progress log & next steps (updated 2026-07-25)
 
 Roadmap source: `~/.claude/plans/temporal-hopping-sifakis.md` (feature numbers below refer
 to it). Hard deadline: **Tokyo Game Dungeon 13 booth, 2026-08-08**; App Store submission
@@ -204,7 +206,7 @@ target ~Jul 25–28. Branch: `feature/touch_input`.
   disambiguation, any-key skip under Input System-only (`MangaPanel` + module
   `SplashScreen`, the latter in the **ModuleCollections repo**).
 - **Test overhaul**: 26 deterministic EditMode tests (entity unit tests + rebuilt state
-  tests + crash/hang regression tests), seeded `BeanLauncher`, instance bean ids,
+  tests + crash/hang regression tests), seeded `BobaLauncher`, instance boba ids,
   `InternalsVisibleTo("BobaKami.Tests")`.
 - Editor-verified: pointer lanes, arcade key stepping, Space/click bite, splash/manga
   any-key skip, repeated PlayMode stop without crash.
@@ -243,10 +245,34 @@ target ~Jul 25–28. Branch: `feature/touch_input`.
    tap/bite start; splash + manga touch skip; About menu; clean app quit.
 
 ### Then — M1 (scoring), behind original schedule, booth-critical first
-3. **Feature 3 — score redesign**  ← current work (domain + tests). Known issues to address there:
-   `GameStatsDto` carries *current* combo (0 at death — game-over shows `MaxComboCount`
-   separately); `BeanLauncher.UpdateLaunchRate` drops launchRate 10→1 at first combo
-   (curve `max(1, log2(combo)*0.5)`) — review during tuning (Feature 17).
+3. **Feature 3 — score redesign** (domain + tests done 2026-07-25, branch `feature/scoring`).
+   - **Scoring**: pure static `ScoreRules` (`Assets/1_BobaKami/Entities/ScoreRules.cs`) is the
+     one home for the curve — each boba scores `100 × tier`, tier `1/2/3/4/5` at combo
+     `<5 / <10 / <20 / <50 / 50+` (tier-2 boundary at 5 lines up with the combo popup);
+     `ScoreRules.GetScore(combo)` is the entry point. `Player.Score` accrues in `EatBoba`;
+     reset in `Initialize`.
+   - **`GameStatsDto`** now carries `Score / Combo / MaxCombo / BobaEaten / Multiplier` (was
+     2 fields smuggling max-combo through `Combo`). **Score vs boba count are separate HUD
+     values**: `GameStatPresenter.scoreText` shows `Score`, `bobaCountText` shows `BobaEaten`
+     (next to the boba icon), and it shows the active `×N` next to the combo popup.
+     The **game-over screen** (`GameOverScreen.prefab` → `GameOverPresenter`) shows all three:
+     `scoreText`=`Score`, `bobaCountText`=`BobaEaten` (the boba-icon group), `comboText`=`MaxCombo`.
+   - **Pace = current combo, resets on drop (breather)**: `PlayGameState` feeds
+     `UpdateLaunchRate(ComboCount)` on each eat, so speed rises with the chain; on a **drop** it
+     calls `BobaLauncher.ResetLaunchRate()` to snap the pace back to the `initialLaunchRate` floor
+     immediately, so one drop doesn't cascade into an unrecoverable barrage — the player gets a
+     breather and the pace rebuilds as the combo climbs again. (This deliberately re-introduces the
+     post-hit slowdown an earlier pass called "defect 2"; it's a game-feel feature, not a bug.)
+     `BobaLauncher` has a serialized `initialLaunchRate` floor that both `Initialize` (cross-restart
+     leak) and `ResetLaunchRate` (per-drop) restore. **Curve shape and the 5-heart fail model are
+     untouched** — retuning is Feature 17; the fail model is frozen because Feature 4 persists scores.
+   - **Rename `Bean` → `Boba`** across domain, adapters, tests, asset/file names, the scene's
+     serialized-field keys, and the `Bean` project tag (→ `Boba`, matched by
+     `BiteInputHandler.CompareTag`). Domain now speaks the game's own noun; still fully
+     view-agnostic. GUIDs preserved (files `git mv`'d with their `.meta`).
+   - ⚠ **Editor wiring still needed**: open `BobaLauncherData.asset` once so Unity serializes
+     the new `initialLaunchRate` field (defaults to 1 = current `launchRate`). The `×N`
+     multiplier text and the separate boba-count text are already wired in `Gameplay.unity`.
 4. **Feature 4 — local high-score table** (SOAR `JsonableVariable`, top-N). ⚠ This ships
    `persistentDataPath` — companyName/bundle id are frozen from here.
 5. **Feature 5 — new-record detection**, then M2: Main Menu (6), booth mode (7),

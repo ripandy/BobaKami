@@ -9,11 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b2522926c4674e57a498633eaf2ee1b6, type: 3}
-  m_Name: BeanLauncherData
+  m_Script: {fileID: 11500000, guid: 4c5a15dfd7e64446991d1523e899eeea, type: 3}
+  m_Name: BittenBobaGameEvent
   m_EditorClassIdentifier: 
-  value:
-    launchRate: 1
-    initialLaunchRate: 1
-  valueEventType: 0
-  autoResetValue: 1
+  value: 0
