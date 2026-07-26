@@ -56,7 +56,7 @@ namespace BobaKami.Gameplay.HUD
             const int minCombo = 5;
 
             comboValue.text = combo < minCombo ? string.Empty : combo.ToString();
-            multiplierText.text = $"×{multiplier}";
+            multiplierText.text = multiplier.ToString();
             comboParent.SetActive(combo >= minCombo);
 
             if (combo < minCombo) return;
