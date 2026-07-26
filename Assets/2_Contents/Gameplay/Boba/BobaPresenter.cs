@@ -12,20 +12,20 @@ using Random = UnityEngine.Random;
 
 namespace BobaKami.Gameplay
 {
-    public class BeanPresenter : MonoBehaviour, IBeanPresenter
+    public class BobaPresenter : MonoBehaviour, IBobaPresenter
     {
-        [SerializeField] private SoarDictionary<int, GameObject> beans;
-        [SerializeField] private GameObject beanPrefab;
+        [SerializeField] private SoarDictionary<int, GameObject> bobas;
+        [SerializeField] private GameObject bobaPrefab;
         [SerializeField] private Transform launcher;
         [SerializeField] private Transform bobaContainer;
         [SerializeField] private float launchSpeed = 13.2f;
         [SerializeField] private float rotationAngle = 3f;
 
         [Header("Debug")]
-        [SerializeField] private GameEvent<int> bittenBeanEvent;
+        [SerializeField] private GameEvent<int> bittenBobaEvent;
         
         // TODO: To Unity's Official ObjectPool
-        private readonly Stack<GameObject> beanPool = new();
+        private readonly Stack<GameObject> bobaPool = new();
 
         private const float VariationFactor = 0.25f;
         
@@ -33,19 +33,19 @@ namespace BobaKami.Gameplay
 
         private void Start()
         {
-            beans.Clear();
+            bobas.Clear();
         }
         
         public async ValueTask<bool> Show(int id, DirectionEnum throwDirection, CancellationToken cancellationToken = default)
         {
-            if (!beans.TryGetValue(id, out var bean))
+            if (!bobas.TryGetValue(id, out var boba))
             {
-                if (!beanPool.TryPop(out bean))
+                if (!bobaPool.TryPop(out boba))
                 {
-                    bean = Instantiate(beanPrefab, bobaContainer);
+                    boba = Instantiate(bobaPrefab, bobaContainer);
                 }
                 
-                beans.Add(id, bean);
+                bobas.Add(id, boba);
             }
             
             var angle = throwDirection switch
@@ -60,21 +60,21 @@ namespace BobaKami.Gameplay
             var variationRotation = Quaternion.Euler(0, 0, angle + Random.Range(-VariationFactor, VariationFactor));
             launcherTransform.SetLocalPositionAndRotation(variationPosition, variationRotation); 
             
-            bean.transform.SetLocalPositionAndRotation(launcherTransform.localPosition, default);
-            bean.SetActive(true);
+            boba.transform.SetLocalPositionAndRotation(launcherTransform.localPosition, default);
+            boba.SetActive(true);
             
-            if (!bean.TryGetComponent<Rigidbody2D>(out var beanRigidbody))
+            if (!boba.TryGetComponent<Rigidbody2D>(out var bobaRigidbody))
             {
-                beanRigidbody = bean.AddComponent<Rigidbody2D>();
+                bobaRigidbody = boba.AddComponent<Rigidbody2D>();
             }
 
             Vector2 direction = launcherTransform.up;
-            beanRigidbody.AddForce(direction * launchSpeed, ForceMode2D.Impulse);
+            bobaRigidbody.AddForce(direction * launchSpeed, ForceMode2D.Impulse);
             
-            var droppedTask = UniTask.WaitWhile(() => bean.transform.localPosition.y >= -1, cancellationToken: cancellationToken);
-            var hiddenTask = UniTask.WaitWhile(() => bean.activeInHierarchy, cancellationToken: cancellationToken);
+            var droppedTask = UniTask.WaitWhile(() => boba.transform.localPosition.y >= -1, cancellationToken: cancellationToken);
+            var hiddenTask = UniTask.WaitWhile(() => boba.activeInHierarchy, cancellationToken: cancellationToken);
             
-            // Dropped means the bean hit the ground, while hidden means the bean was eaten.
+            // Dropped means the boba hit the ground, while hidden means the boba was eaten.
             var (canceled, result) = await UniTask.WhenAny(droppedTask, hiddenTask).SuppressCancellationThrow();
 
             return canceled || result == 0;
@@ -82,14 +82,14 @@ namespace BobaKami.Gameplay
 
         public void Hide(int id)
         {
-            if (!beans.Remove(id, out var bean)) return;
-            beanPool.Push(bean);
-            bean.SetActive(false);
+            if (!bobas.Remove(id, out var boba)) return;
+            bobaPool.Push(boba);
+            boba.SetActive(false);
         }
         
         private void OnDestroy()
         {
-            beanPool.Clear();
+            bobaPool.Clear();
             subscription?.Dispose();
         }
     }

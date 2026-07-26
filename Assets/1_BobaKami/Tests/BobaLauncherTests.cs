@@ -2,7 +2,7 @@ using NUnit.Framework;
 
 namespace BobaKami.Tests
 {
-    public class BeanLauncherTests
+    public class BobaLauncherTests
     {
         [TestCase(10f, 100)]
         [TestCase(2f, 500)]
@@ -10,22 +10,22 @@ namespace BobaKami.Tests
         [TestCase(1f, 1000)]
         public void LaunchDelay_IsFlooredMillisecondsPerLaunch(float launchRate, int expectedDelay)
         {
-            var launcher = new BeanLauncher { launchRate = launchRate };
+            var launcher = new BobaLauncher { launchRate = launchRate };
 
             Assert.AreEqual(expectedDelay, launcher.LaunchDelay);
         }
 
         [Test]
-        public void LaunchBean_AssignsSequentialIds_PerInstance()
+        public void LaunchBoba_AssignsSequentialIds_PerInstance()
         {
-            var launcherA = new BeanLauncher();
-            var launcherB = new BeanLauncher();
+            var launcherA = new BobaLauncher();
+            var launcherB = new BobaLauncher();
             launcherA.Initialize();
             launcherB.Initialize();
 
-            var a0 = launcherA.LaunchBean();
-            var a1 = launcherA.LaunchBean();
-            var b0 = launcherB.LaunchBean();
+            var a0 = launcherA.LaunchBoba();
+            var a1 = launcherA.LaunchBoba();
+            var b0 = launcherB.LaunchBoba();
 
             Assert.AreEqual(0, a0.Id);
             Assert.AreEqual(1, a1.Id);
@@ -33,46 +33,46 @@ namespace BobaKami.Tests
         }
 
         [Test]
-        public void Initialize_ResetsIdsAndBeans()
+        public void Initialize_ResetsIdsAndBobas()
         {
-            var launcher = new BeanLauncher();
+            var launcher = new BobaLauncher();
             launcher.Initialize();
-            launcher.LaunchBean();
-            launcher.LaunchBean();
+            launcher.LaunchBoba();
+            launcher.LaunchBoba();
 
             launcher.Initialize();
 
-            Assert.AreEqual(0, launcher.LaunchedBeanCount);
-            Assert.AreEqual(0, launcher.LaunchBean().Id);
+            Assert.AreEqual(0, launcher.LaunchedBobaCount);
+            Assert.AreEqual(0, launcher.LaunchBoba().Id);
         }
 
         [Test]
-        public void TryGetBean_AndRemoveBean_ManageLaunchedBeans()
+        public void TryGetBoba_AndRemoveBoba_ManageLaunchedBobas()
         {
-            var launcher = new BeanLauncher();
+            var launcher = new BobaLauncher();
             launcher.Initialize();
-            var bean = launcher.LaunchBean();
+            var boba = launcher.LaunchBoba();
 
-            Assert.IsTrue(launcher.TryGetBean(bean.Id, out var found));
-            Assert.AreEqual(bean.ThrowDirection, found.ThrowDirection);
+            Assert.IsTrue(launcher.TryGetBoba(boba.Id, out var found));
+            Assert.AreEqual(boba.ThrowDirection, found.ThrowDirection);
 
-            launcher.RemoveBean(bean.Id);
+            launcher.RemoveBoba(boba.Id);
 
-            Assert.IsFalse(launcher.TryGetBean(bean.Id, out _));
-            Assert.AreEqual(0, launcher.LaunchedBeanCount);
+            Assert.IsFalse(launcher.TryGetBoba(boba.Id, out _));
+            Assert.AreEqual(0, launcher.LaunchedBobaCount);
         }
 
         [Test]
         public void SeededLaunchers_ProduceIdenticalDirectionSequences()
         {
-            var launcherA = new BeanLauncher(seed: 42);
-            var launcherB = new BeanLauncher(seed: 42);
+            var launcherA = new BobaLauncher(seed: 42);
+            var launcherB = new BobaLauncher(seed: 42);
             launcherA.Initialize();
             launcherB.Initialize();
 
             for (var i = 0; i < 20; i++)
             {
-                Assert.AreEqual(launcherA.LaunchBean().ThrowDirection, launcherB.LaunchBean().ThrowDirection);
+                Assert.AreEqual(launcherA.LaunchBoba().ThrowDirection, launcherB.LaunchBoba().ThrowDirection);
             }
         }
 
@@ -82,7 +82,7 @@ namespace BobaKami.Tests
         [TestCase(99, 3.3147f)]
         public void UpdateLaunchRate_FollowsComboCurve(int peakCombo, float expectedRate)
         {
-            var launcher = new BeanLauncher { launchRate = 10f };
+            var launcher = new BobaLauncher { launchRate = 10f };
 
             launcher.UpdateLaunchRate(peakCombo);
 
@@ -93,7 +93,7 @@ namespace BobaKami.Tests
         [Test]
         public void Initialize_RestoresInitialLaunchRate()
         {
-            var launcher = new BeanLauncher { initialLaunchRate = 2f, launchRate = 9f };
+            var launcher = new BobaLauncher { initialLaunchRate = 2f, launchRate = 9f };
 
             launcher.Initialize();
 
@@ -105,7 +105,7 @@ namespace BobaKami.Tests
         public void UpdateLaunchRate_ClampsToInitialLaunchRate_NotHardcodedOne()
         {
             // Low combos map below the floor; the floor is the configured start pace, not 1.
-            var launcher = new BeanLauncher { initialLaunchRate = 3f, launchRate = 3f };
+            var launcher = new BobaLauncher { initialLaunchRate = 3f, launchRate = 3f };
 
             launcher.UpdateLaunchRate(2); // log2(2)*0.5 = 0.5, well under 3
 
@@ -117,7 +117,7 @@ namespace BobaKami.Tests
         {
             // Regression: pace is fed the run's *peak* combo, so it must be monotonic even as
             // the current combo collapses to 0 after a hit.
-            var launcher = new BeanLauncher();
+            var launcher = new BobaLauncher();
             launcher.Initialize();
 
             var previous = launcher.launchRate;

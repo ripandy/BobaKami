@@ -5,27 +5,27 @@ using BobaKami.Interfaces;
 namespace BobaKami
 {
     [Serializable]
-    public class BeanLauncher
+    public class BobaLauncher
     {
         public float launchRate = 2;
 
         // Starting pace, restored on Initialize so a restart doesn't inherit the previous run's
-        // speed. Serialized as a designer knob (see BeanLauncherData.asset); curve tuning is Feature 17.
+        // speed. Serialized as a designer knob (see BobaLauncherData.asset); curve tuning is Feature 17.
         public float initialLaunchRate = 1;
 
-        private readonly Dictionary<int, Bean> beans = new();
+        private readonly Dictionary<int, Boba> bobas = new();
         private readonly Random rnd = new();
         private int nextId;
 
-        public int LaunchedBeanCount => beans.Count;
+        public int LaunchedBobaCount => bobas.Count;
         public int LaunchDelay => (int)Math.Floor(1000 / launchRate);
 
-        public BeanLauncher()
+        public BobaLauncher()
         {
         }
 
         // Seeded constructor for deterministic tests.
-        internal BeanLauncher(int seed)
+        internal BobaLauncher(int seed)
         {
             rnd = new Random(seed);
         }
@@ -33,26 +33,26 @@ namespace BobaKami
         public void Initialize()
         {
             nextId = 0;
-            beans.Clear();
+            bobas.Clear();
             launchRate = initialLaunchRate;
         }
 
-        public Bean LaunchBean()
+        public Boba LaunchBoba()
         {
             var rndVal = rnd.Next(0, 3) - 1;
-            var bean = new Bean(nextId++, (DirectionEnum)rndVal);
-            beans.Add(bean.Id, bean);
-            return bean;
+            var boba = new Boba(nextId++, (DirectionEnum)rndVal);
+            bobas.Add(boba.Id, boba);
+            return boba;
         }
         
-        public bool TryGetBean(int id, out Bean bean)
+        public bool TryGetBoba(int id, out Boba boba)
         {
-            return beans.TryGetValue(id, out bean);
+            return bobas.TryGetValue(id, out boba);
         }
 
-        public void RemoveBean(int id)
+        public void RemoveBoba(int id)
         {
-            beans.Remove(id);
+            bobas.Remove(id);
         }
 
         // Fed the run's peak combo (not current) so pace never falls back after a hit.

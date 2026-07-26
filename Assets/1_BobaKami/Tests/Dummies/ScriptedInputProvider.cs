@@ -17,7 +17,7 @@ namespace BobaKami.Tests
         private readonly AsyncValueSource<int> bites = new();
 
         public void PushDirection(DirectionEnum direction) => directions.Push(direction);
-        public void PushBite(int beanId) => bites.Push(beanId);
+        public void PushBite(int bobaId) => bites.Push(bobaId);
 
         public void CancelPendingWaits()
         {

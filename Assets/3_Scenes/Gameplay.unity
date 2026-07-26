@@ -1385,15 +1385,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerData: {fileID: 11400000, guid: 4ebfdd8ffab5f4275bf0d1024e519dd3, type: 2}
-  beanLauncherData: {fileID: 11400000, guid: a1594b67aba134ee9b5e3f3f6072fc04, type: 2}
+  bobaLauncherData: {fileID: 11400000, guid: a1594b67aba134ee9b5e3f3f6072fc04, type: 2}
   healthPercentageVariable: {fileID: 11400000, guid: 0fb124c41ff364130b820aa8aede4893, type: 2}
   gameStatsVariable: {fileID: 11400000, guid: 7bbe7fcdc3be24af5a050c8fc845864c, type: 2}
-  beanPresenter: {fileID: 1327886727}
+  bobaPresenter: {fileID: 1327886727}
   introPresenter: {fileID: 61880938}
   gameOverPresenter: {fileID: 2046207549}
   playerDirectionVariable: {fileID: 11400000, guid: 316db64eb9b8d451283a2160efff58bd, type: 2}
   faceDirectionConverterVectorVariable: {fileID: 11400000, guid: cdfd753ea791f4a17a6deb42391ec24f, type: 2}
-  bittenBeanGameEvent: {fileID: 11400000, guid: aa20e3d133c234ba7b77685f7dcc26de, type: 2}
+  bittenBobaGameEvent: {fileID: 11400000, guid: aa20e3d133c234ba7b77685f7dcc26de, type: 2}
 --- !u!1 &438092994
 GameObject:
   m_ObjectHideFlags: 0
@@ -3632,8 +3632,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mouthOpenEvent: {fileID: 11400000, guid: 9b55983f9987245539d5aea4e451a1e8, type: 2}
   mouthColliderEnableDuration: {fileID: 11400000, guid: 35da12fb03a1a446ba443b2cdbe1e2b5, type: 2}
-  bittenBeanEvent: {fileID: 11400000, guid: aa20e3d133c234ba7b77685f7dcc26de, type: 2}
-  beans: {fileID: 11400000, guid: cceef721b78a94a2ebc7d2711d31995a, type: 2}
+  bittenBobaEvent: {fileID: 11400000, guid: aa20e3d133c234ba7b77685f7dcc26de, type: 2}
+  bobas: {fileID: 11400000, guid: cceef721b78a94a2ebc7d2711d31995a, type: 2}
   mouthCollider: {fileID: 1255764110}
 --- !u!114 &1217933043
 MonoBehaviour:
@@ -4013,7 +4013,7 @@ GameObject:
   - component: {fileID: 1327886726}
   - component: {fileID: 1327886727}
   m_Layer: 0
-  m_Name: BeanPresenter
+  m_Name: BobaPresenter
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4048,13 +4048,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bafa39540cd47cf9192a9b2f4b28d04, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  beans: {fileID: 11400000, guid: cceef721b78a94a2ebc7d2711d31995a, type: 2}
-  beanPrefab: {fileID: 9148768586878178730, guid: 5fce6bd55f7774187b00986a6f9eb312, type: 3}
+  bobas: {fileID: 11400000, guid: cceef721b78a94a2ebc7d2711d31995a, type: 2}
+  bobaPrefab: {fileID: 9148768586878178730, guid: 5fce6bd55f7774187b00986a6f9eb312, type: 3}
   launcher: {fileID: 1795070895}
   bobaContainer: {fileID: 1381567755}
   launchSpeed: 13.2
   rotationAngle: 3
-  bittenBeanEvent: {fileID: 11400000, guid: aa20e3d133c234ba7b77685f7dcc26de, type: 2}
+  bittenBobaEvent: {fileID: 11400000, guid: aa20e3d133c234ba7b77685f7dcc26de, type: 2}
 --- !u!1 &1381567754
 GameObject:
   m_ObjectHideFlags: 0

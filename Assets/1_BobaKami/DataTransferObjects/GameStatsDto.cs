@@ -14,15 +14,15 @@ namespace BobaKami.DataTransferObjects
         public int Score { get; }
         public int Combo { get; }
         public int MaxCombo { get; }
-        public int BeansEaten { get; }
+        public int BobaEaten { get; }
         public int Multiplier { get; }
 
-        public GameStatsDto(int score, int combo, int maxCombo, int beansEaten, int multiplier)
+        public GameStatsDto(int score, int combo, int maxCombo, int bobaEaten, int multiplier)
         {
             Score = score;
             Combo = combo;
             MaxCombo = maxCombo;
-            BeansEaten = beansEaten;
+            BobaEaten = bobaEaten;
             Multiplier = multiplier;
         }
     }

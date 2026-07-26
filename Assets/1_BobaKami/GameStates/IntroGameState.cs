@@ -7,7 +7,7 @@ namespace BobaKami.GameStates
     public class IntroGameState : IGameState
     {
         private readonly Player player;
-        private readonly BeanLauncher beanLauncher;
+        private readonly BobaLauncher bobaLauncher;
         private readonly IPlayerHealthPresenter playerHealthPresenter;
         private readonly IPlayerStatsPresenter playerStatsPresenter;
         private readonly IIntroPresenter introPresenter;
@@ -16,13 +16,13 @@ namespace BobaKami.GameStates
         
         public IntroGameState(
             Player player,
-            BeanLauncher beanLauncher,
+            BobaLauncher bobaLauncher,
             IPlayerHealthPresenter playerHealthPresenter,
             IPlayerStatsPresenter playerStatsPresenter,
             IIntroPresenter introPresenter)
         {
             this.player = player;
-            this.beanLauncher = beanLauncher;
+            this.bobaLauncher = bobaLauncher;
             this.playerHealthPresenter = playerHealthPresenter;
             this.playerStatsPresenter = playerStatsPresenter;
             this.introPresenter = introPresenter;
@@ -33,7 +33,7 @@ namespace BobaKami.GameStates
             var showIntroTask = introPresenter.Show(cancellationToken);
             
             player.Initialize();
-            beanLauncher.Initialize();
+            bobaLauncher.Initialize();
             
             playerHealthPresenter.Show(player.HealthPercentage);
             playerStatsPresenter.Show(player.GameStats);

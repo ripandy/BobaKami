@@ -3,7 +3,7 @@ using Soar.Variables;
 
 namespace BobaKami.Gameplay
 {
-    public class BeanLauncherData : JsonableVariable<BeanLauncher>
+    public class BobaLauncherData : JsonableVariable<BobaLauncher>
     {
     }
 }

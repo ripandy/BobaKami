@@ -8,13 +8,13 @@ namespace BobaKami.GameStates
     public class PlayGameState : IGameState, IDisposable
     {
         private readonly Player player;
-        private readonly BeanLauncher beanLauncher;
+        private readonly BobaLauncher bobaLauncher;
         private readonly IPlayerHealthPresenter playerHealthPresenter;
         private readonly IPlayerStatsPresenter playerStatsPresenter;
         private readonly IPlayerDirectionPresenter playerDirectionPresenter;
         private readonly IPlayerDirectionInputProvider playerDirectionInputProvider;
         private readonly IPlayerBiteInputProvider playerBiteInputProvider;
-        private readonly IBeanPresenter beanPresenter;
+        private readonly IBobaPresenter bobaPresenter;
 
         public GameStateEnum Id => GameStateEnum.GamePlay;
 
@@ -25,22 +25,22 @@ namespace BobaKami.GameStates
 
         public PlayGameState(
             Player player,
-            BeanLauncher beanLauncher,
+            BobaLauncher bobaLauncher,
             IPlayerHealthPresenter playerHealthPresenter,
             IPlayerStatsPresenter playerStatsPresenter,
             IPlayerDirectionPresenter playerDirectionPresenter,
             IPlayerDirectionInputProvider playerDirectionInputProvider,
             IPlayerBiteInputProvider playerBiteInputProvider,
-            IBeanPresenter beanPresenter)
+            IBobaPresenter bobaPresenter)
         {
             this.player = player;
-            this.beanLauncher = beanLauncher;
+            this.bobaLauncher = bobaLauncher;
             this.playerHealthPresenter = playerHealthPresenter;
             this.playerStatsPresenter = playerStatsPresenter;
             this.playerDirectionPresenter = playerDirectionPresenter;
             this.playerDirectionInputProvider = playerDirectionInputProvider;
             this.playerBiteInputProvider = playerBiteInputProvider;
-            this.beanPresenter = beanPresenter;
+            this.bobaPresenter = bobaPresenter;
         }
         
         public async ValueTask<GameStateEnum> Running(CancellationToken cancellationToken = default)
@@ -48,13 +48,13 @@ namespace BobaKami.GameStates
             cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             tcs = new TaskCompletionSource<bool>();
 
-            // Complete tcs on cancellation even when no bean is in flight; otherwise Running
-            // would await forever (loops break on cancel, but only LaunchBean sets tcs).
+            // Complete tcs on cancellation even when no boba is in flight; otherwise Running
+            // would await forever (loops break on cancel, but only LaunchBoba sets tcs).
             var runTcs = tcs;
             using var cancellationRegistration = cts.Token.Register(() => runTcs.TrySetResult(false));
 
             _ = HandlePlayerDirectionInput();
-            _ = ExecuteBeanLauncher();
+            _ = ExecuteBobaLauncher();
             _ = HandlePlayerBiteInput();
 
             await tcs.Task;
@@ -86,14 +86,14 @@ namespace BobaKami.GameStates
             }
         }
 
-        private async Task ExecuteBeanLauncher()
+        private async Task ExecuteBobaLauncher()
         {
             while (cts != null && !Token.IsCancellationRequested)
             {
                 try
                 {
-                    _ = LaunchBean();
-                    await Task.Delay(beanLauncher.LaunchDelay, Token);
+                    _ = LaunchBoba();
+                    await Task.Delay(bobaLauncher.LaunchDelay, Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -102,18 +102,18 @@ namespace BobaKami.GameStates
             }
         }
 
-        private async Task LaunchBean()
+        private async Task LaunchBoba()
         {
             try
             {
-                var bean = beanLauncher.LaunchBean();
-                var dropped = await beanPresenter.Show(bean.Id, bean.ThrowDirection, Token);
+                var boba = bobaLauncher.LaunchBoba();
+                var dropped = await bobaPresenter.Show(boba.Id, boba.ThrowDirection, Token);
                 await Task.Yield();
-                beanLauncher.RemoveBean(bean.Id);
+                bobaLauncher.RemoveBoba(boba.Id);
                 if (!dropped) return;
                 
-                // Bean was dropped, hide it. Eaten beans are hidden by the player bite input.
-                beanPresenter.Hide(bean.Id);
+                // Boba was dropped, hide it. Eaten bobas are hidden by the player bite input.
+                bobaPresenter.Hide(boba.Id);
             }
             catch (OperationCanceledException)
             {
@@ -136,13 +136,13 @@ namespace BobaKami.GameStates
                 try
                 {
                     var bittenId = await playerBiteInputProvider.WaitForBite(Token);
-                    if (beanLauncher.TryGetBean(bittenId, out var bittenBean))
+                    if (bobaLauncher.TryGetBoba(bittenId, out var bittenBoba))
                     {
-                        player.EatBean();
+                        player.EatBoba();
                         playerHealthPresenter.Show(player.HealthPercentage);
                         playerStatsPresenter.Show(player.GameStats);
-                        beanLauncher.UpdateLaunchRate(player.MaxComboCount);
-                        beanPresenter.Hide(bittenBean.Id);
+                        bobaLauncher.UpdateLaunchRate(player.MaxComboCount);
+                        bobaPresenter.Hide(bittenBoba.Id);
                     }
                 }
                 catch (OperationCanceledException)

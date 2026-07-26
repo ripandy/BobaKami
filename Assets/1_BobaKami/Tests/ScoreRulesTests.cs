@@ -28,9 +28,9 @@ namespace BobaKami.Tests
         }
 
         [Test]
-        public void BeanBaseScore_IsOneHundred()
+        public void BobaBaseScore_IsOneHundred()
         {
-            Assert.AreEqual(100, ScoreRules.BeanBaseScore);
+            Assert.AreEqual(100, ScoreRules.BobaBaseScore);
         }
     }
 }

@@ -13,24 +13,24 @@ namespace BobaKami.Tests
             var player = new Player();
             // initialLaunchRate is what Initialize() restores; set it (not just launchRate) so
             // ticks stay fast across the re-initialize each IntroGameState.Running performs.
-            var beanLauncher = new BeanLauncher(seed: 42) { initialLaunchRate = 100 };
+            var bobaLauncher = new BobaLauncher(seed: 42) { initialLaunchRate = 100 };
 
             var playerPresenter = new DummyPlayerPresenter();
             var introPresenter = new InstantIntroPresenter();
-            var beanPresenter = new ScriptedBeanPresenter { AutoDrop = true }; // every run dies quickly
+            var bobaPresenter = new ScriptedBobaPresenter { AutoDrop = true }; // every run dies quickly
             var inputProvider = new ScriptedInputProvider();
             var gameOverPresenter = new ScriptedGameOverPresenter(true, false); // restart once, then exit
 
-            var introGameState = new IntroGameState(player, beanLauncher, playerPresenter, playerPresenter, introPresenter);
+            var introGameState = new IntroGameState(player, bobaLauncher, playerPresenter, playerPresenter, introPresenter);
             using var playGameState = new PlayGameState(
                 player,
-                beanLauncher,
+                bobaLauncher,
                 playerPresenter,
                 playerPresenter,
                 playerPresenter,
                 inputProvider,
                 inputProvider,
-                beanPresenter);
+                bobaPresenter);
             var gameOverGameState = new GameOverGameState(player, gameOverPresenter);
 
             // Round 1: Intro -> GamePlay -> GameOver -> restart (Intro).

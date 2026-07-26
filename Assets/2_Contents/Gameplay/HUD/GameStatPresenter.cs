@@ -36,7 +36,7 @@ namespace BobaKami.Gameplay.HUD
         private void UpdateStats(GameStatsDto stats)
         {
             UpdateScore(stats.Score);
-            UpdateBobaCount(stats.BeansEaten);
+            UpdateBobaCount(stats.BobaEaten);
             ShowCombo(stats.Combo, stats.Multiplier).Forget();
         }
 
@@ -45,7 +45,7 @@ namespace BobaKami.Gameplay.HUD
             scoreText.text = score.ToString();
         }
 
-        // Boba (bean) count — how many the player has eaten this run, shown next to the boba icon.
+        // Boba count — how many the player has eaten this run, shown next to the boba icon.
         private void UpdateBobaCount(int bobaCount)
         {
             bobaCountText.text = bobaCount.ToString();

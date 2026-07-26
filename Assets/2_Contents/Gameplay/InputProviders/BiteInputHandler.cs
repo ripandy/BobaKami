@@ -19,10 +19,10 @@ namespace BobaKami.Gameplay
         [SerializeField] private Variable<float> mouthColliderEnableDuration;
         
         [Header("Output")]
-        [SerializeField] private GameEvent<int> bittenBeanEvent;
+        [SerializeField] private GameEvent<int> bittenBobaEvent;
         
         [Header("Dependencies")]
-        [SerializeField] private SoarDictionary<int, GameObject> beans;
+        [SerializeField] private SoarDictionary<int, GameObject> bobas;
         [SerializeField] private Collider2D mouthCollider;
 
         private IDisposable subscription;
@@ -46,12 +46,12 @@ namespace BobaKami.Gameplay
         
         private void OnTriggerStay2D(Collider2D other)
         {
-            if (!other.gameObject.CompareTag("Bean")) return;
+            if (!other.gameObject.CompareTag("Boba")) return;
             
-            var pair = (beans as IDictionary<int, GameObject>).FirstOrDefault(pair => pair.Value == other.gameObject);
+            var pair = (bobas as IDictionary<int, GameObject>).FirstOrDefault(pair => pair.Value == other.gameObject);
             if (pair.Value == null) return;
             
-            bittenBeanEvent.Raise(pair.Key);
+            bittenBobaEvent.Raise(pair.Key);
             mouthCollider.enabled = false;
         }
         

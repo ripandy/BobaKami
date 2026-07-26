@@ -10,9 +10,9 @@ namespace BobaKami.Tests
     public class PlayGameStateTests
     {
         private Player player;
-        private BeanLauncher beanLauncher;
+        private BobaLauncher bobaLauncher;
         private ScriptedInputProvider inputProvider;
-        private ScriptedBeanPresenter beanPresenter;
+        private ScriptedBobaPresenter bobaPresenter;
         private DummyPlayerPresenter playerPresenter;
         private PlayGameState playGameState;
 
@@ -20,23 +20,23 @@ namespace BobaKami.Tests
         public void SetUp()
         {
             player = new Player();
-            beanLauncher = new BeanLauncher(seed: 42) { initialLaunchRate = 100 }; // 10 ms launch ticks after Initialize
+            bobaLauncher = new BobaLauncher(seed: 42) { initialLaunchRate = 100 }; // 10 ms launch ticks after Initialize
             inputProvider = new ScriptedInputProvider();
-            beanPresenter = new ScriptedBeanPresenter();
+            bobaPresenter = new ScriptedBobaPresenter();
             playerPresenter = new DummyPlayerPresenter();
 
             playGameState = new PlayGameState(
                 player,
-                beanLauncher,
+                bobaLauncher,
                 playerPresenter,
                 playerPresenter,
                 playerPresenter,
                 inputProvider,
                 inputProvider,
-                beanPresenter);
+                bobaPresenter);
 
             player.Initialize();
-            beanLauncher.Initialize();
+            bobaLauncher.Initialize();
         }
 
         [TearDown]
@@ -48,7 +48,7 @@ namespace BobaKami.Tests
         [Test]
         public async Task Running_ReturnsGameOver_WhenHpDepleted()
         {
-            beanPresenter.AutoDrop = true; // every bean drops -> 5 drops kill (100 hp / 20 dmg)
+            bobaPresenter.AutoDrop = true; // every boba drops -> 5 drops kill (100 hp / 20 dmg)
 
             var result = await playGameState.Running();
 
@@ -58,25 +58,25 @@ namespace BobaKami.Tests
         }
 
         [Test]
-        public async Task EatingBean_UpdatesScoreCombo_AndHidesBean()
+        public async Task EatingBoba_UpdatesScoreCombo_AndHidesBoba()
         {
             using var externalCts = new CancellationTokenSource();
             var runTask = playGameState.Running(externalCts.Token).AsTask();
 
-            await beanPresenter.WaitForShown(0);
+            await bobaPresenter.WaitForShown(0);
             inputProvider.PushBite(0);
 
-            // Wait for the eat to be processed (bean 0 hidden).
-            while (beanPresenter.HiddenBeans.Count == 0 && !runTask.IsCompleted)
+            // Wait for the eat to be processed (boba 0 hidden).
+            while (bobaPresenter.HiddenBobas.Count == 0 && !runTask.IsCompleted)
             {
                 await Task.Delay(10);
             }
 
             var stats = player.GameStats;
-            Assert.AreEqual(100, stats.Score); // first bean: 100 base * x1 tier
+            Assert.AreEqual(100, stats.Score); // first boba: 100 base * x1 tier
             Assert.AreEqual(1, stats.Combo);
-            Assert.AreEqual(1, stats.BeansEaten);
-            CollectionAssert.Contains(beanPresenter.HiddenBeans, 0);
+            Assert.AreEqual(1, stats.BobaEaten);
+            CollectionAssert.Contains(bobaPresenter.HiddenBobas, 0);
             Assert.AreEqual(1, playerPresenter.ShownStats.Count);
 
             externalCts.Cancel();
@@ -104,17 +104,17 @@ namespace BobaKami.Tests
         }
 
         [Test]
-        public async Task Running_Completes_OnExternalCancellation_WithNoBeanInFlight()
+        public async Task Running_Completes_OnExternalCancellation_WithNoBobaInFlight()
         {
-            // Slow launcher: after the first bean resolves there is a ~2 s gap with no bean
+            // Slow launcher: after the first boba resolves there is a ~2 s gap with no boba
             // in flight. Cancelling in that gap used to hang Running forever (tcs never set).
-            beanLauncher.launchRate = 0.5f;
-            beanPresenter.AutoDrop = true;
+            bobaLauncher.launchRate = 0.5f;
+            bobaPresenter.AutoDrop = true;
 
             using var externalCts = new CancellationTokenSource();
             var runTask = playGameState.Running(externalCts.Token).AsTask();
 
-            await beanPresenter.WaitForShown(0);
+            await bobaPresenter.WaitForShown(0);
             await Task.Delay(50); // let the drop/damage settle; launch gap is 2000 ms
 
             externalCts.Cancel();
@@ -133,7 +133,7 @@ namespace BobaKami.Tests
             using var externalCts = new CancellationTokenSource();
             var runTask = playGameState.Running(externalCts.Token).AsTask();
 
-            await beanPresenter.WaitForShown(0);
+            await bobaPresenter.WaitForShown(0);
             inputProvider.CancelPendingWaits();
 
             // Direction loop's OCE side effect: presenter reset to Forward.
