@@ -141,7 +141,7 @@ namespace BobaKami.GameStates
                         player.EatBean();
                         playerHealthPresenter.Show(player.HealthPercentage);
                         playerStatsPresenter.Show(player.GameStats);
-                        beanLauncher.UpdateLaunchRate(player.ComboCount);
+                        beanLauncher.UpdateLaunchRate(player.MaxComboCount);
                         beanPresenter.Hide(bittenBean.Id);
                     }
                 }

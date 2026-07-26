@@ -1,6 +1,5 @@
 using System.Threading;
 using System.Threading.Tasks;
-using BobaKami.DataTransferObjects;
 using BobaKami.Interfaces;
 
 namespace BobaKami.GameStates
@@ -20,8 +19,7 @@ namespace BobaKami.GameStates
 
         public async ValueTask<GameStateEnum> Running(CancellationToken cancellationToken = default)
         {
-            var statistics = new GameStatsDto(player.BeanEatenCount, player.MaxComboCount);
-            var restart = await gameOverPresenter.Show(statistics, cancellationToken);
+            var restart = await gameOverPresenter.Show(player.GameStats, cancellationToken);
             return restart ? GameStateEnum.Intro : GameStateEnum.None;
         }
     }
