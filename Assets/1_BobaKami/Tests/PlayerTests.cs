@@ -16,12 +16,14 @@ namespace BobaKami.Tests
 
             Assert.AreEqual(player.hp, player.CurrentHp);
             Assert.AreEqual(0, player.BeanEatenCount);
+            Assert.AreEqual(0, player.Score);
             Assert.AreEqual(0, player.ComboCount);
+            Assert.AreEqual(0, player.MaxComboCount);
             Assert.AreEqual(Interfaces.DirectionEnum.Forward, player.Direction);
         }
 
         [Test]
-        public void EatBean_IncrementsScoreAndCombo_AndHeals()
+        public void EatBean_IncrementsBeansAndCombo_AndHeals()
         {
             var player = new Player();
             player.Damaged(); // 100 -> 80 so healing is observable
@@ -31,6 +33,49 @@ namespace BobaKami.Tests
             Assert.AreEqual(1, player.BeanEatenCount);
             Assert.AreEqual(1, player.ComboCount);
             Assert.AreEqual(81, player.CurrentHp);
+        }
+
+        [Test]
+        public void EatBean_AccruesScore_AtComboTierMultiplier()
+        {
+            var player = new Player();
+
+            // Beans 1-4 score at x1 (100 each) -> 400 after 4.
+            for (var i = 0; i < 4; i++) player.EatBean();
+            Assert.AreEqual(400, player.Score);
+
+            // The 5th bean crosses into tier 2 (x2) -> +200.
+            player.EatBean();
+            Assert.AreEqual(600, player.Score);
+            Assert.AreEqual(2, player.GameStats.Multiplier);
+        }
+
+        [Test]
+        public void Initialize_ResetsScoreAndMaxCombo()
+        {
+            var player = new Player();
+            for (var i = 0; i < 6; i++) player.EatBean();
+            Assert.Greater(player.Score, 0);
+            Assert.AreEqual(6, player.MaxComboCount);
+
+            player.Initialize();
+
+            Assert.AreEqual(0, player.Score);
+            Assert.AreEqual(0, player.MaxComboCount);
+        }
+
+        [Test]
+        public void GameStats_ReportsMaxCombo_IndependentlyOfCurrentCombo()
+        {
+            var player = new Player();
+            player.EatBean();
+            player.EatBean();
+            player.EatBean();
+            player.Damaged(); // current combo -> 0, peak stays 3
+
+            var stats = player.GameStats;
+            Assert.AreEqual(0, stats.Combo);
+            Assert.AreEqual(3, stats.MaxCombo);
         }
 
         [Test]

@@ -20,7 +20,7 @@ namespace BobaKami.Tests
         public void SetUp()
         {
             player = new Player();
-            beanLauncher = new BeanLauncher(seed: 42) { launchRate = 100 }; // 10 ms launch ticks
+            beanLauncher = new BeanLauncher(seed: 42) { initialLaunchRate = 100 }; // 10 ms launch ticks after Initialize
             inputProvider = new ScriptedInputProvider();
             beanPresenter = new ScriptedBeanPresenter();
             playerPresenter = new DummyPlayerPresenter();
@@ -73,8 +73,9 @@ namespace BobaKami.Tests
             }
 
             var stats = player.GameStats;
-            Assert.AreEqual(1, stats.Score);
+            Assert.AreEqual(100, stats.Score); // first bean: 100 base * x1 tier
             Assert.AreEqual(1, stats.Combo);
+            Assert.AreEqual(1, stats.BeansEaten);
             CollectionAssert.Contains(beanPresenter.HiddenBeans, 0);
             Assert.AreEqual(1, playerPresenter.ShownStats.Count);
 

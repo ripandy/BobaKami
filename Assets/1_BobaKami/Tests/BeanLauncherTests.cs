@@ -76,18 +76,58 @@ namespace BobaKami.Tests
             }
         }
 
-        [TestCase(1, 1f)]      // log2(1) = 0 -> clamped to 1
+        [TestCase(1, 1f)]      // log2(1) = 0 -> clamped to initialLaunchRate (1)
         [TestCase(4, 1f)]      // log2(4)*0.5 = 1
         [TestCase(16, 2f)]     // log2(16)*0.5 = 2
         [TestCase(99, 3.3147f)]
-        public void UpdateLaunchRate_FollowsComboCurve(int combo, float expectedRate)
+        public void UpdateLaunchRate_FollowsComboCurve(int peakCombo, float expectedRate)
         {
             var launcher = new BeanLauncher { launchRate = 10f };
 
-            launcher.UpdateLaunchRate(combo);
+            launcher.UpdateLaunchRate(peakCombo);
 
             Assert.AreEqual(expectedRate, launcher.launchRate, 1e-3f,
-                "launchRate = max(1, log2(combo) * 0.5)");
+                "launchRate = max(initialLaunchRate, log2(peakCombo) * 0.5)");
+        }
+
+        [Test]
+        public void Initialize_RestoresInitialLaunchRate()
+        {
+            var launcher = new BeanLauncher { initialLaunchRate = 2f, launchRate = 9f };
+
+            launcher.Initialize();
+
+            Assert.AreEqual(2f, launcher.launchRate,
+                "A restart must not inherit the previous run's pace.");
+        }
+
+        [Test]
+        public void UpdateLaunchRate_ClampsToInitialLaunchRate_NotHardcodedOne()
+        {
+            // Low combos map below the floor; the floor is the configured start pace, not 1.
+            var launcher = new BeanLauncher { initialLaunchRate = 3f, launchRate = 3f };
+
+            launcher.UpdateLaunchRate(2); // log2(2)*0.5 = 0.5, well under 3
+
+            Assert.AreEqual(3f, launcher.launchRate);
+        }
+
+        [Test]
+        public void UpdateLaunchRate_NeverDecreases_ForNonDecreasingPeakCombo()
+        {
+            // Regression: pace is fed the run's *peak* combo, so it must be monotonic even as
+            // the current combo collapses to 0 after a hit.
+            var launcher = new BeanLauncher();
+            launcher.Initialize();
+
+            var previous = launcher.launchRate;
+            foreach (var peak in new[] { 0, 4, 4, 16, 16, 64, 200 })
+            {
+                launcher.UpdateLaunchRate(peak);
+                Assert.GreaterOrEqual(launcher.launchRate, previous,
+                    $"launchRate dropped at peakCombo={peak}");
+                previous = launcher.launchRate;
+            }
         }
     }
 }

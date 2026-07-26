@@ -11,7 +11,9 @@ namespace BobaKami.Tests
         public async Task GameStates_FullLoop_RestartsThenExits()
         {
             var player = new Player();
-            var beanLauncher = new BeanLauncher(seed: 42) { launchRate = 100 };
+            // initialLaunchRate is what Initialize() restores; set it (not just launchRate) so
+            // ticks stay fast across the re-initialize each IntroGameState.Running performs.
+            var beanLauncher = new BeanLauncher(seed: 42) { initialLaunchRate = 100 };
 
             var playerPresenter = new DummyPlayerPresenter();
             var introPresenter = new InstantIntroPresenter();
