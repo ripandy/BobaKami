@@ -80,14 +80,14 @@ namespace BobaKami.Tests
         [TestCase(4, 1f)]      // log2(4)*0.5 = 1
         [TestCase(16, 2f)]     // log2(16)*0.5 = 2
         [TestCase(99, 3.3147f)]
-        public void UpdateLaunchRate_FollowsComboCurve(int peakCombo, float expectedRate)
+        public void UpdateLaunchRate_FollowsComboCurve(int combo, float expectedRate)
         {
             var launcher = new BobaLauncher { launchRate = 10f };
 
-            launcher.UpdateLaunchRate(peakCombo);
+            launcher.UpdateLaunchRate(combo);
 
             Assert.AreEqual(expectedRate, launcher.launchRate, 1e-3f,
-                "launchRate = max(initialLaunchRate, log2(peakCombo) * 0.5)");
+                "launchRate = max(initialLaunchRate, log2(combo) * 0.5)");
         }
 
         [Test]
@@ -113,21 +113,32 @@ namespace BobaKami.Tests
         }
 
         [Test]
-        public void UpdateLaunchRate_NeverDecreases_ForNonDecreasingPeakCombo()
+        public void ResetLaunchRate_RestoresInitialLaunchRate()
         {
-            // Regression: pace is fed the run's *peak* combo, so it must be monotonic even as
-            // the current combo collapses to 0 after a hit.
+            // On a drop the pace resets to the floor, giving the player a breather.
+            var launcher = new BobaLauncher { initialLaunchRate = 2f };
+            launcher.Initialize();
+            launcher.UpdateLaunchRate(64); // ramp the pace up
+
+            launcher.ResetLaunchRate();
+
+            Assert.AreEqual(2f, launcher.launchRate);
+        }
+
+        [Test]
+        public void PaceRisesWithCombo_ThenResetsOnDrop_ThenRebuilds()
+        {
             var launcher = new BobaLauncher();
             launcher.Initialize();
 
-            var previous = launcher.launchRate;
-            foreach (var peak in new[] { 0, 4, 4, 16, 16, 64, 200 })
-            {
-                launcher.UpdateLaunchRate(peak);
-                Assert.GreaterOrEqual(launcher.launchRate, previous,
-                    $"launchRate dropped at peakCombo={peak}");
-                previous = launcher.launchRate;
-            }
+            launcher.UpdateLaunchRate(16);
+            Assert.AreEqual(2f, launcher.launchRate, 1e-3f, "pace rises with the chain");
+
+            launcher.ResetLaunchRate();
+            Assert.AreEqual(1f, launcher.launchRate, "a drop resets pace to the floor");
+
+            launcher.UpdateLaunchRate(64);
+            Assert.AreEqual(3f, launcher.launchRate, 1e-3f, "pace rebuilds as the combo climbs again");
         }
     }
 }

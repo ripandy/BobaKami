@@ -123,6 +123,9 @@ namespace BobaKami.GameStates
             
             player.Damaged();
             playerHealthPresenter.Show(player.HealthPercentage);
+            // A drop resets the pace back to the floor: the barrage eases so the player can
+            // recover, and rebuilds via UpdateLaunchRate as the combo climbs again.
+            bobaLauncher.ResetLaunchRate();
             if (player.IsAlive) return;
 
             cts?.Cancel();
@@ -141,7 +144,7 @@ namespace BobaKami.GameStates
                         player.EatBoba();
                         playerHealthPresenter.Show(player.HealthPercentage);
                         playerStatsPresenter.Show(player.GameStats);
-                        bobaLauncher.UpdateLaunchRate(player.MaxComboCount);
+                        bobaLauncher.UpdateLaunchRate(player.ComboCount);
                         bobaPresenter.Hide(bittenBoba.Id);
                     }
                 }

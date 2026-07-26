@@ -55,11 +55,20 @@ namespace BobaKami
             bobas.Remove(id);
         }
 
-        // Fed the run's peak combo (not current) so pace never falls back after a hit.
+        // Fed the current combo so pace rises with the chain. On a drop the combo resets and
+        // ResetLaunchRate() drops the pace back to the floor, giving the player a breather to
+        // recover instead of a fast barrage cascading into more drops.
         // Clamped to initialLaunchRate — the game never gets slower than its starting pace.
-        public void UpdateLaunchRate(int peakCombo)
+        public void UpdateLaunchRate(int combo)
         {
-            launchRate = (float)Math.Max(initialLaunchRate, Math.Log(peakCombo, 2) * 0.5f);
+            launchRate = (float)Math.Max(initialLaunchRate, Math.Log(combo, 2) * 0.5f);
+        }
+
+        // Called when a boba drops: reset the pace to the starting floor so the player gets a
+        // breather. The pace then rebuilds via UpdateLaunchRate as the combo climbs again.
+        public void ResetLaunchRate()
+        {
+            launchRate = initialLaunchRate;
         }
     }
 }
