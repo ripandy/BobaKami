@@ -17,6 +17,7 @@ namespace BobaKami.Gameplay
 {
     public class GameOverPresenter : MonoBehaviour, IGameOverPresenter
     {
+        [SerializeField] private HighScoreData highScoreData;
         [SerializeField] private Variable<Vector2> faceVector;
         [SerializeField] private GameEvent<bool> mouthOpenEvent;
         [SerializeField] private Transform[] animationObjects;
@@ -25,6 +26,8 @@ namespace BobaKami.Gameplay
         [SerializeField] private TMP_Text scoreText;
         [SerializeField] private TMP_Text bobaCountText;
         [SerializeField] private TMP_Text comboText;
+        [SerializeField] private TMP_Text bestScoreText;
+        [SerializeField] private GameObject newHighScoreObject;
         [SerializeField] private CanvasGroup canvasGroup;
         [SerializeField] private float fadeDuration = 0.5f;
 
@@ -76,6 +79,10 @@ namespace BobaKami.Gameplay
             scoreText.text = stats.Score.ToString();
             bobaCountText.text = stats.BobaEaten.ToString();
             comboText.text = stats.MaxCombo.ToString();
+            bestScoreText.text = highScoreData.Value.BestScore.ToString();
+            
+            var isNew = highScoreData.Value.BestScore == stats.Score;
+            newHighScoreObject.SetActive(isNew);
 
             var tasks = animationObjects.Select((obj, i) =>
             {
