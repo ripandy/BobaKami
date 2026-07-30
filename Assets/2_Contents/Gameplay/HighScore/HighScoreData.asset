@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 32
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74aec9b3e226f40d3b2048efa299c2c3, type: 3}
+  m_Name: HighScoreData
+  m_EditorClassIdentifier: BobaKami.Contents::BobaKami.Gameplay.HighScoreData
+  value:
+    entries:
+    - score: 300
+      recordedAtUtc: 2026-07-28T11:22:41.6474730Z
+      initials: 
+  valueEventType: 1
+  autoResetValue: 0
