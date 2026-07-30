@@ -31,7 +31,9 @@ namespace BobaKami.Tests
                 inputProvider,
                 inputProvider,
                 bobaPresenter);
-            var gameOverGameState = new GameOverGameState(player, gameOverPresenter);
+            var highScoreTable = new HighScoreTable();
+            var highScoreStore = new RecordingHighScoreStore();
+            var gameOverGameState = new GameOverGameState(player, gameOverPresenter, highScoreTable, highScoreStore);
 
             // Round 1: Intro -> GamePlay -> GameOver -> restart (Intro).
             Assert.AreEqual(GameStateEnum.GamePlay, await introGameState.Running());
@@ -47,6 +49,51 @@ namespace BobaKami.Tests
 
             Assert.AreEqual(2, introPresenter.ShowCount);
             Assert.AreEqual(2, gameOverPresenter.ShownStats.Count);
+
+            // Both runs auto-dropped every boba, so neither scored and neither took a table slot.
+            Assert.AreEqual(0, highScoreStore.SaveCount);
+            Assert.AreEqual(0, highScoreTable.Entries.Count);
+        }
+
+        [Test]
+        public async Task GameOver_SubmitsAndSavesScore_WhenPlayerDied()
+        {
+            // hp must be assigned before Initialize: the ctor runs Initialize first.
+            var player = new Player { hp = 20 };
+            player.Initialize();
+            player.EatBoba();  // Score = 100
+            player.Damaged();  // hp 20 -> 0, dead
+
+            var highScoreTable = new HighScoreTable();
+            var highScoreStore = new RecordingHighScoreStore();
+            var gameOverGameState = new GameOverGameState(
+                player, new ScriptedGameOverPresenter(false), highScoreTable, highScoreStore);
+
+            Assert.AreEqual(GameStateEnum.None, await gameOverGameState.Running());
+
+            Assert.AreEqual(1, highScoreStore.SaveCount);
+            Assert.AreSame(highScoreTable, highScoreStore.LastSaved);
+            Assert.AreEqual(100, highScoreTable.BestScore);
+        }
+
+        [Test]
+        public async Task GameOver_DoesNotSubmit_WhenRunWasCancelledRatherThanLost()
+        {
+            // PlayGameState returns GameOver on external cancellation too, with the player alive.
+            var player = new Player();
+            player.Initialize();
+            player.EatBoba();
+
+            var highScoreTable = new HighScoreTable();
+            var highScoreStore = new RecordingHighScoreStore();
+            var gameOverGameState = new GameOverGameState(
+                player, new ScriptedGameOverPresenter(false), highScoreTable, highScoreStore);
+
+            Assert.IsTrue(player.IsAlive);
+            await gameOverGameState.Running();
+
+            Assert.AreEqual(0, highScoreStore.SaveCount);
+            Assert.AreEqual(0, highScoreTable.Entries.Count);
         }
     }
 }

@@ -191,11 +191,13 @@ threshold ±0.3 → Left/Forward/Right) and `MouthOpenVariable : Variable<bool>`
   `InputActionReference` sub-asset fileIDs are importer-hashed — those fields must be
   wired in the editor.
 
-## Progress log & next steps (updated 2026-07-25)
+## Progress log & next steps (updated 2026-07-27)
 
-Roadmap source: `~/.claude/plans/temporal-hopping-sifakis.md` (feature numbers below refer
-to it). Hard deadline: **Tokyo Game Dungeon 13 booth, 2026-08-08**; App Store submission
-target ~Jul 25–28. Branch: `feature/touch_input`.
+Roadmap feature numbers below refer to the original plan (the `temporal-hopping-sifakis.md`
+plan file is no longer on disk — treat this log as the source of truth). Hard deadline:
+**Tokyo Game Dungeon 13 booth, 2026-08-08**; App Store submission target ~Jul 25–28.
+Current branch: `main` (M1/`feature/scoring` merged 2026-07-27, `0cb8c08`). Next work
+(Feature 4) branches from `main`.
 
 ### Done
 - **M0 — rebrand** (merged): BobaKami namespaces/assets/repo; identity locked (see Overview).
@@ -224,28 +226,80 @@ target ~Jul 25–28. Branch: `feature/touch_input`.
   `Show{Settings,AboutMenu}Command` assets, `2_Contents/MangaPanel/` → `2_Contents/Title/`.
   `InputModeToggleButton` reworked to cycle `InputModeController.AvailableModes(...)`;
   touch-press merged into MangaPanel's any-press skip.
+- **Mouth-bite auto-reset fix** (merged, device-verified): `BlendShapeTriggerHandler`
+  (ModuleCollections) raised `triggerFlagEvent` on *every* `ARFace.updated`, and SOAR's
+  `GameEvent.Raise` never dedupes (the `Variable.Value`-setter guard is bypassed;
+  `MouthOpenVariable` is `OnAssign`). So it emitted `false` ~60×/s while closed →
+  `PlayerSpritePresenter.OnMouthOpen`'s `AwaitOperation.Drop` bite window re-fired every frame
+  (sprite pinned in Bite, collider always re-armed, latent Title auto-advance). Fixed by
+  edge-triggering at source (`bool? lastTriggered`, raise only on change). The ModuleCollections
+  SplashScreen touch-press fix and the stray `AppStateLoadProgress.asset` were also handled.
+- **M1 / Feature 3 — score redesign** (merged `0cb8c08`, device-verified 2026-07-27): scoring
+  curve, HUD boba-count vs score split, game-over 3-stat screen, pace-resets-on-drop, and the
+  full `Bean → Boba` rename. Detail retained below under *M1 — Feature 3 (done)*.
 
-### Immediate next (in order)
-0. **Mouth-bite auto-reset fix** (branch `fix/mouth_bite_auto_reset`, code done 2026-07-25):
-   `BlendShapeTriggerHandler` (ModuleCollections) raised `triggerFlagEvent` on *every*
-   `ARFace.updated`, and SOAR's `GameEvent.Raise` never dedupes (the `Variable.Value`-setter
-   guard is bypassed; `MouthOpenVariable` is `OnAssign` regardless). So `MouthOpenVariable`
-   emitted `false` ~60×/s while closed, and `PlayerSpritePresenter.OnMouthOpen`'s
-   `AwaitOperation.Drop` bite window re-triggered every frame → sprite pinned in Bite, mouth
-   collider permanently re-armed, and (latent) Title `StandbyUI` auto-advancing right after its
-   grace window. Fix: **edge-trigger at source** — track `bool? lastTriggered`, raise only on
-   change (matches `BlendShapeCollectionTriggerHandler`, which already uses `.Value =`). Needs
-   an on-device confirm, then commit in the ModuleCollections repo.
-1. ⚠ **Uncommitted in the ModuleCollections repo**: `ModularScreens/Runtime/SplashScreen/
-   SplashScreen.cs` (the touch-press fix — `onAnyButtonPress` alone never fires for touches)
-   and a stray `AppStateManagement/.../AppStateLoadProgress.asset` value change (play-mode
-   noise, revert it). Commit the SplashScreen fix before the next device build.
-2. **On-device iOS re-test**: face mirror fix + mouth-bite auto-reset fix; Auto→Face with
-   ARKit; toggle Face ↔ Touch from the standby settings overlay mid-session; standby
-   tap/bite start; splash + manga touch skip; About menu; clean app quit.
+### Immediate next
+4. **Feature 4 — local high-score table** — code landed on `feature/high_score`,
+   **editor wiring + verification still open**. ⚠ **Freeze point reached**: this ships
+   `persistentDataPath`, so `companyName` (WanderWonder Games) and bundle id
+   (`com.ripandy.bobakami`) are **locked from here** — see Overview. Changing either orphans
+   every existing save.
+   - **Domain** (`Assets/1_BobaKami/`): `Entities/HighScoreTable.cs` holds the top-10 table
+     (`Capacity = 10`) plus the `HighScoreEntry` struct. Entry fields are **public fields, not
+     properties** — `JsonableVariable<T>` serializes with `JsonUtility`, which only sees fields
+     (this is why `GameStatsDto`, a property-only `readonly struct`, cannot be the persisted
+     type, and why `PlayerData.asset` only ever stored `hp`). `recordedAtUtc` is an ISO-8601
+     round-trip string because `JsonUtility` cannot serialize `DateTime`; an unused `initials`
+     field is already in the format so Feature 8 needs no migration.
+     `TrySubmit(score, utcNow)` returns the **1-based rank** (0 = did not place) — Feature 5's
+     new-record detection is meant to read that return value. Rules: scores `<= 0` never place;
+     **ties place after the incumbent** (you must beat a score, not match it); `Normalize()`
+     repairs a loaded/hand-edited file (null list, wrong order, oversize) and uses a **stable**
+     `OrderByDescending`, since `List.Sort` would scramble ties.
+   - **Port**: `Interfaces/IHighScoreStore.Save(HighScoreTable)` — domain decides *when*, adapter
+     decides *how*.
+   - **Hook**: `GameOverGameState.SubmitHighScore()` runs **before** `gameOverPresenter.Show`,
+     so the screen renders a table that already includes this run, and before `IntroGameState`
+     resets the player. Guarded on `!player.IsAlive`: `PlayGameState.Running` returns `GameOver`
+     on external cancellation (app quit / PlayMode exit) too, and an aborted run must not place.
+   - **Adapter**: `2_Contents/Gameplay/HighScore/HighScoreData.cs` —
+     `JsonableVariable<HighScoreTable>, IHighScoreStore`, the dual-role pattern. It uses SOAR's
+     `JsonableExtensions` with `Application.persistentDataPath` passed **explicitly** (the no-arg
+     `SaveToJson()` writes to `Application.dataPath` under `#if UNITY_EDITOR`), guards `Load()`
+     with `IsJsonFileExist` (`LoadFromJson` logs an *error* on first launch otherwise), and calls
+     `Raise(table)` rather than assigning `Value` — the domain mutates the table in place, so the
+     setter's equality check would swallow the notification.
+   - **Binding**: `GameplayBindingInstaller` calls `highScoreData.Load()` **before**
+     `BindFromInstance(highScoreData.Value)` — `FromJsonString` replaces the instance rather than
+     filling it, so binding first would bind a stale object.
+   - **UI**: `GameOverPresenter` gained `highScoreData` + `bestScoreText` and sets BEST in
+     `AnimateStats`. It reads the SO directly instead of widening `IGameOverPresenter`, matching
+     how `GameStatPresenter` reads `GameStatsVariable`.
+   - **Tests**: `Tests/HighScoreTableTests.cs` (ordering, rank, ties, capacity trim, cutoff
+     rejection, non-positive rejection, `Normalize`, timestamp round-trip) + two
+     `GameStateTests` cases for submit-on-death / no-submit-on-cancel, and a
+     `Dummies/RecordingHighScoreStore`. **61 assertions green** via the out-of-Unity dotnet route.
+   - ⏳ **Editor tasks still open** (must be done in Unity):
+     1. Create `HighScoreData.asset` (BobaKami → HighScoreData) in
+        `2_Contents/Gameplay/HighScore/`, with **`autoResetValue: 0`** (`PlayerData.asset` has
+        it at `1`; leaving it on wipes the table at PlayMode exit).
+     2. Assign it on `GameplayBindingInstaller` (Gameplay.unity) and on `GameOverPresenter`
+        (`GameOverScreen.prefab`); add the BEST `TMP_Text` and wire `bestScoreText`.
+     3. **Carried over from Feature 3**: the `ResultStats` group in `GameOverScreen.prefab` has a
+        3rd stat group (Score) offset to `y:-220` still needing arrangement (position/spacing,
+        optional `HorizontalLayoutGroup`, inner GO renames). Adding the BEST row is the moment.
+     4. Verify: PlayMode round-trip (die → BEST correct → stop → re-enter → BEST survived), then
+        on-device that the table survives an app kill (`persistentDataPath` differs from the
+        editor path, and this is the project's first disk write of any kind).
 
-### Then — M1 (scoring), behind original schedule, booth-critical first
-3. **Feature 3 — score redesign** (domain + tests done 2026-07-25, branch `feature/scoring`).
+### Then
+5. **Feature 5 — new-record detection**, then M2: Main Menu (6), booth mode (7),
+   initials entry (8). Settings UI (13) is now partly in place (`StandbySettingsMenuOverlay`
+   hosts the `InputModeVariable` override) and still needs JSON persistence — the startup
+   `modes[0]` reset was already removed (coercion now in `InputModeController` via
+   `InputModePolicy.Coerce`), so a saved legal choice will survive startup once persisted.
+
+### M1 — Feature 3 (done) — reference detail
    - **Scoring**: pure static `ScoreRules` (`Assets/1_BobaKami/Entities/ScoreRules.cs`) is the
      one home for the curve — each boba scores `100 × tier`, tier `1/2/3/4/5` at combo
      `<5 / <10 / <20 / <50 / 50+` (tier-2 boundary at 5 lines up with the combo popup);
@@ -270,16 +324,6 @@ target ~Jul 25–28. Branch: `feature/touch_input`.
      serialized-field keys, and the `Bean` project tag (→ `Boba`, matched by
      `BiteInputHandler.CompareTag`). Domain now speaks the game's own noun; still fully
      view-agnostic. GUIDs preserved (files `git mv`'d with their `.meta`).
-   - ⚠ **Editor wiring still needed**: open `BobaLauncherData.asset` once so Unity serializes
-     the new `initialLaunchRate` field (defaults to 1 = current `launchRate`). The `×N`
-     multiplier text and the separate boba-count text are already wired in `Gameplay.unity`.
-4. **Feature 4 — local high-score table** (SOAR `JsonableVariable`, top-N). ⚠ This ships
-   `persistentDataPath` — companyName/bundle id are frozen from here.
-5. **Feature 5 — new-record detection**, then M2: Main Menu (6), booth mode (7),
-   initials entry (8). Settings UI (13) is now partly in place (`StandbySettingsMenuOverlay`
-   hosts the `InputModeVariable` override) and still needs JSON persistence — the startup
-   `modes[0]` reset was already removed (coercion now in `InputModeController` via
-   `InputModePolicy.Coerce`), so a saved legal choice will survive startup once persisted.
 
 ### Parked / notes
 - `Player { hp = X }` object-initializer quirk: ctor runs `Initialize()` before the

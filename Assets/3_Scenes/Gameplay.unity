@@ -342,6 +342,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerData: {fileID: 11400000, guid: 4ebfdd8ffab5f4275bf0d1024e519dd3, type: 2}
   bobaLauncherData: {fileID: 11400000, guid: a1594b67aba134ee9b5e3f3f6072fc04, type: 2}
+  highScoreData: {fileID: 11400000, guid: a2e0d83e043a24031a0c64cd98b7fae2, type: 2}
   healthPercentageVariable: {fileID: 11400000, guid: 0fb124c41ff364130b820aa8aede4893, type: 2}
   gameStatsVariable: {fileID: 11400000, guid: 7bbe7fcdc3be24af5a050c8fc845864c, type: 2}
   bobaPresenter: {fileID: 1327886727}

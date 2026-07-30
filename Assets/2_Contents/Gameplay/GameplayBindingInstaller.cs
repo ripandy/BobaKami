@@ -10,6 +10,7 @@ namespace BobaKami.Gameplay
     {
         [SerializeField] private PlayerData playerData;
         [SerializeField] private BobaLauncherData bobaLauncherData;
+        [SerializeField] private HighScoreData highScoreData;
 
         [SerializeField] private HealthPercentageVariable healthPercentageVariable;
         [SerializeField] private GameStatsVariable gameStatsVariable;
@@ -25,8 +26,10 @@ namespace BobaKami.Gameplay
         public void Install(DIContainer container, IContextArg contextArg)
         {
             // Domain
+            highScoreData.Load(); // replaces Value, so it must run before the instance is bound
             container.BindFromInstance(playerData.Value);
             container.BindFromInstance(bobaLauncherData.Value);
+            container.BindFromInstance(highScoreData.Value);
             container.BindSingleton<IntroGameState>();
             container.BindSingleton<PlayGameState>();
             container.BindSingleton<GameOverGameState>();
@@ -38,6 +41,7 @@ namespace BobaKami.Gameplay
             container.BindFromInstance<IBobaPresenter>(bobaPresenter);
             container.BindFromInstance<IIntroPresenter>(introPresenter);
             container.BindFromInstance<IGameOverPresenter>(gameOverPresenter);
+            container.BindFromInstance<IHighScoreStore>(highScoreData);
 
             // Input Providers
             container.BindFromInstance<IPlayerDirectionInputProvider>(faceDirectionConverterVectorVariable);
