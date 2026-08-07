@@ -31,6 +31,15 @@ namespace BobaKami.Gameplay
         [SerializeField] private CanvasGroup canvasGroup;
         [SerializeField] private float fadeDuration = 0.5f;
 
+        [Tooltip("Booth safety net: if nobody answers the game-over screen within this many " +
+                 "seconds, return to the Title standby screen. Set to 0 to wait forever.")]
+        [SerializeField] private float idleTimeoutSeconds = 20f;
+
+        // OnFullView's return codes. Index 0 is the RestartButton and index 1 the ExitButton,
+        // so these double as the button indices; Show maps RestartResult to "replay".
+        private const int RestartResult = 0;
+        private const int ExitResult = 1;
+
         private IDisposable subscription;
 
         private void Start()
@@ -43,27 +52,28 @@ namespace BobaKami.Gameplay
             });
         }
 
-        public async ValueTask<bool> Show(GameStatsDto stats, CancellationToken cancellationToken = default)
+        public async ValueTask<bool> Show(GameStatsDto stats, int highScoreRank,
+            CancellationToken cancellationToken = default)
         {
             canvasGroup.gameObject.SetActive(true);
-            
+
             int result;
             try
             {
-                await AnimateStats(stats, cancellationToken);
+                await AnimateStats(stats, highScoreRank, cancellationToken);
                 result = await OnFullView(cancellationToken);
                 await OnFadeOut(cancellationToken);
             }
             catch (OperationCanceledException)
             {
                 // forced exit button
-                result = 1;
+                result = ExitResult;
             }
-            
+
             canvasGroup.alpha = 0f;
             canvasGroup.gameObject.SetActive(false);
-            
-            return result == 0;
+
+            return result == RestartResult;
         }
 
         private UniTask OnFadeIn(CancellationToken cancellationToken = default)
@@ -71,7 +81,8 @@ namespace BobaKami.Gameplay
             return LMotion.Create(0, 1, fadeDuration).Bind(alpha => canvasGroup.alpha = alpha).ToUniTask(cancellationToken: cancellationToken);
         }
 
-        private async UniTask AnimateStats(GameStatsDto stats, CancellationToken cancellationToken = default)
+        private async UniTask AnimateStats(GameStatsDto stats, int highScoreRank,
+            CancellationToken cancellationToken = default)
         {
             const float duration = 0.5f;
             const float delayFactor = 0.1f;
@@ -81,8 +92,9 @@ namespace BobaKami.Gameplay
             comboText.text = stats.MaxCombo.ToString();
             bestScoreText.text = highScoreData.Value.BestScore.ToString();
             
-            var isNew = highScoreData.Value.BestScore == stats.Score;
-            newHighScoreObject.SetActive(isNew);
+            // Rank 1 is the only new record. Comparing BestScore to Score instead would also
+            // light up on a tie, since TrySubmit places equal scores after the incumbent.
+            newHighScoreObject.SetActive(highScoreRank == 1);
 
             var tasks = animationObjects.Select((obj, i) =>
             {
@@ -105,13 +117,36 @@ namespace BobaKami.Gameplay
 
         private async UniTask<int> OnFullView(CancellationToken cancellationToken = default)
         {
-            var buttonTasks = buttons.Select(button => button.OnClickAsync(cancellationToken));
-            var mouthTasks = mouthOpenEvent.AsObservable().Distinct().Where(opened => !opened)
-                .FirstAsync(cancellationToken: cancellationToken).AsUniTask();
-            var result = await UniTask.WhenAny(buttonTasks.Append(mouthTasks));
-            if (result == 2)
+            // Linked so the losing awaiters (button handlers, the mouth subscription, the idle
+            // delay) are torn down when this call resolves instead of living until app quit.
+            using var viewCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var token = viewCts.Token;
+
+            var tasks = buttons.Select(button => button.OnClickAsync(token)).ToList();
+
+            var mouthIndex = tasks.Count;
+            tasks.Add(mouthOpenEvent.AsObservable().Distinct().Where(opened => !opened)
+                .FirstAsync(cancellationToken: token).AsUniTask());
+
+            var timeoutIndex = -1;
+            if (idleTimeoutSeconds > 0f)
             {
-                return faceVector.Value.x > 0 ? 1 : 0;
+                timeoutIndex = tasks.Count;
+                tasks.Add(UniTask.Delay(TimeSpan.FromSeconds(idleTimeoutSeconds), cancellationToken: token));
+            }
+
+            var result = await UniTask.WhenAny(tasks);
+
+            // Nobody answered — the player walked off. Exit to the Title standby rather than
+            // restarting, so the booth returns to its "insert coin" prompt for whoever arrives
+            // next instead of dropping them mid-run. Safe now that the standby gate runs before
+            // the manga: the only thing between here and that prompt is the splash, which ends
+            // on its own. (Before that reversal the manga sat in the way, unskippable by bite.)
+            if (result == timeoutIndex) return ExitResult;
+
+            if (result == mouthIndex)
+            {
+                return faceVector.Value.x > 0 ? ExitResult : RestartResult;
             }
             return result;
         }

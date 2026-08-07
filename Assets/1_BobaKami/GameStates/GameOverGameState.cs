@@ -25,8 +25,8 @@ namespace BobaKami.GameStates
 
         public async ValueTask<GameStateEnum> Running(CancellationToken cancellationToken = default)
         {
-            SubmitHighScore();
-            var restart = await gameOverPresenter.Show(player.GameStats, cancellationToken);
+            var rank = SubmitHighScore();
+            var restart = await gameOverPresenter.Show(player.GameStats, rank, cancellationToken);
             return restart ? GameStateEnum.Intro : GameStateEnum.None;
         }
 
@@ -36,11 +36,14 @@ namespace BobaKami.GameStates
         /// when it is cancelled externally (app quit / PlayMode exit), and an aborted run should
         /// not take a slot.
         /// </summary>
-        private void SubmitHighScore()
+        /// <returns>The 1-based rank the run placed at, or 0 if it did not place.</returns>
+        private int SubmitHighScore()
         {
-            if (player.IsAlive) return;
-            if (highScoreTable.TrySubmit(player.Score, DateTime.UtcNow) == 0) return;
+            if (player.IsAlive) return 0;
+            var rank = highScoreTable.TrySubmit(player.Score, DateTime.UtcNow);
+            if (rank == 0) return 0;
             highScoreStore.Save(highScoreTable);
+            return rank;
         }
     }
 }

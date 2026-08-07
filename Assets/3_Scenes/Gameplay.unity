@@ -365,7 +365,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   inputMode: {fileID: 11400000, guid: 34ce02fac8044f5b84dc742a86461978, type: 2}
   faceTrackingAvailable: {fileID: 11400000, guid: cd9ed57996124054a0f2ed32269f432a, type: 2}
-  faceTrackingEnabled: {fileID: 11400000, guid: 71c02dc6af80414a94b85cc441033aa1, type: 2}
   pointerInput: {fileID: 900000010}
   keyButtonInput: {fileID: 900000020}
 --- !u!1 &900000010

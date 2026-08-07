@@ -662,7 +662,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &932541890
 RectTransform:
   m_ObjectHideFlags: 0
@@ -696,8 +696,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7751abafbdac4caa8bd55249cdba6305, type: 3}
   m_Name: 
   m_EditorClassIdentifier: BobaKami.Contents::BobaKami.MainMenu.StandbyUI
-  setNextStateEvent: {fileID: 11400000, guid: 4e49d546c906145f2bfc9cd087cc8f5e, type: 2}
-  nextState: Gameplay
+  mangaIntro: {fileID: 1460903109}
   mouthOpenEvent: {fileID: 11400000, guid: 9b55983f9987245539d5aea4e451a1e8, type: 2}
   inputMode: {fileID: 11400000, guid: 34ce02fac8044f5b84dc742a86461978, type: 2}
 --- !u!114 &932541892
@@ -709,43 +708,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 932541889}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 53498a69873e348939c4e53bdd4830f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Soar.Base::Soar.Events.BoolUnityEventBinder
-  gameEventToListen: {fileID: 11400000, guid: 71c02dc6af80414a94b85cc441033aa1, type: 2}
-  onGameEventRaised:
-    m_PersistentCalls:
-      m_Calls: []
-  onTypedGameEventRaised:
-    m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1108389583}
-        m_TargetAssemblyTypeName: TMPro.TextMeshProUGUI, Unity.TextMeshPro
-        m_MethodName: set_text
-        m_Mode: 5
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: Bite to Start!
-          m_BoolArgument: 0
-        m_CallState: 2
-  onNegatedBoolEventRaised:
-    m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1108389583}
-        m_TargetAssemblyTypeName: TMPro.TextMeshProUGUI, Unity.TextMeshPro
-        m_MethodName: set_text
-        m_Mode: 5
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: Tap to Start!
-          m_BoolArgument: 0
-        m_CallState: 2
+  m_Script: {fileID: 11500000, guid: 0bb502c9c37545cd9d3751a5e8504fc8, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: BobaKami.Contents::BobaKami.MainMenu.StartPromptLabel
+  label: {fileID: 1108389583}
+  faceTrackingEnabled: {fileID: 11400000, guid: 71c02dc6af80414a94b85cc441033aa1, type: 2}
+  faceTrackingPrompt: Bite to Start!
+  pointerPrompt: Tap to Start!
 --- !u!1 &1025440996
 GameObject:
   m_ObjectHideFlags: 0
@@ -921,6 +890,62 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7132223957958935627, guid: b614982c7a6124e579269abba8c60d8c, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7132223957958935627, guid: b614982c7a6124e579269abba8c60d8c, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 7132223957958935627, guid: b614982c7a6124e579269abba8c60d8c, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_Mode
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 7132223957958935627, guid: b614982c7a6124e579269abba8c60d8c, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 932541889}
+    - target: {fileID: 7132223957958935627, guid: b614982c7a6124e579269abba8c60d8c, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_Target
+      value: 
+      objectReference: {fileID: 1460903109}
+    - target: {fileID: 7132223957958935627, guid: b614982c7a6124e579269abba8c60d8c, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7132223957958935627, guid: b614982c7a6124e579269abba8c60d8c, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: SetActive
+      objectReference: {fileID: 0}
+    - target: {fileID: 7132223957958935627, guid: b614982c7a6124e579269abba8c60d8c, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_MethodName
+      value: SetActive
+      objectReference: {fileID: 0}
+    - target: {fileID: 7132223957958935627, guid: b614982c7a6124e579269abba8c60d8c, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: UnityEngine.GameObject, UnityEngine
+      objectReference: {fileID: 0}
+    - target: {fileID: 7132223957958935627, guid: b614982c7a6124e579269abba8c60d8c, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_TargetAssemblyTypeName
+      value: UnityEngine.GameObject, UnityEngine
+      objectReference: {fileID: 0}
+    - target: {fileID: 7132223957958935627, guid: b614982c7a6124e579269abba8c60d8c, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_Arguments.m_BoolArgument
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7132223957958935627, guid: b614982c7a6124e579269abba8c60d8c, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_StringArgument
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 7132223957958935627, guid: b614982c7a6124e579269abba8c60d8c, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
+    - target: {fileID: 7132223957958935627, guid: b614982c7a6124e579269abba8c60d8c, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -940,8 +965,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
 --- !u!1 &1213788226
 GameObject:
   m_ObjectHideFlags: 0
@@ -1035,7 +1060,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1460903110
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1090,7 +1115,8 @@ MonoBehaviour:
   - {fileID: 752988878}
   - {fileID: 1525117675}
   - {fileID: 1805306}
-  standbyUI: {fileID: 932541889}
+  setNextStateEvent: {fileID: 11400000, guid: 4e49d546c906145f2bfc9cd087cc8f5e, type: 2}
+  nextState: Gameplay
 --- !u!225 &1460903114
 CanvasGroup:
   m_ObjectHideFlags: 0

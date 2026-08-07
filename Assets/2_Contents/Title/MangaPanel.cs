@@ -2,6 +2,7 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using LitMotion;
 using R3;
+using Soar.Events;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -9,6 +10,12 @@ using DelayType = LitMotion.DelayType;
 
 namespace BobaKami.MainMenu
 {
+    /// <summary>
+    /// The intro cutscene, played <b>after</b> <see cref="StandbyUI"/> takes the start input and
+    /// immediately before gameplay, so it always has an audience. It animates the panels (any
+    /// button press or touch skips), then raises the next app state. This object must start
+    /// <b>inactive</b> in the scene; StandbyUI activates it on handoff.
+    /// </summary>
     public class MangaPanel : MonoBehaviour
     {
         [Header("Manga Panel")]
@@ -16,19 +23,25 @@ namespace BobaKami.MainMenu
         [SerializeField] private Image[] mangaPanels;
 
         [Header("Handoff")]
-        [Tooltip("Activated once the manga animation completes or is skipped; StandbyUI takes over from there. Must be a sibling, not a child, of this object.")]
-        [SerializeField] private GameObject standbyUI;
+        [SerializeField] private GameEvent<string> setNextStateEvent;
+        [SerializeField] private string nextState = "Gameplay";
+
+        // The press that started the game is still fresh when this object wakes up — StandbyUI
+        // advances on the *release* edge, so a tap or Space press lands moments earlier. Without
+        // this window the manga would instantly skip itself on the very input that summoned it.
+        private const float SkipGraceSeconds = 0.5f;
 
         private async UniTaskVoid Start()
         {
             var cts = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
-            
+
+            var ignoreSkipUntil = Time.unscaledTime + SkipGraceSeconds;
+
             // Skip the manga animation on any button press OR a touch tap.
             using var subscription = AnyPressObservable()
+                .Where(_ => Time.unscaledTime >= ignoreSkipUntil)
                 .Take(1)
                 .Subscribe(_ => CancelAndDispose());
-
-            standbyUI.SetActive(false);
 
             try
             {
@@ -41,10 +54,9 @@ namespace BobaKami.MainMenu
 
             if (destroyCancellationToken.IsCancellationRequested) return;
 
-            // Hand off to StandbyUI, which waits for the start input, then step aside.
-            standbyUI.SetActive(true);
-            gameObject.SetActive(false);
-            
+            // Last step in the Title scene: StandbyUI already took the start input.
+            setNextStateEvent.Raise(nextState);
+
             void CancelAndDispose()
             {
                 if (cts.IsCancellationRequested) return;
