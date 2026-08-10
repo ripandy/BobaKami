@@ -13,9 +13,6 @@ MonoBehaviour:
   m_Name: HighScoreData
   m_EditorClassIdentifier: BobaKami.Contents::BobaKami.Gameplay.HighScoreData
   value:
-    entries:
-    - score: 300
-      recordedAtUtc: 2026-07-28T11:22:41.6474730Z
-      initials: 
+    entries: []
   valueEventType: 1
   autoResetValue: 0

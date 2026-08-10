@@ -66,14 +66,41 @@ namespace BobaKami.Tests
 
             var highScoreTable = new HighScoreTable();
             var highScoreStore = new RecordingHighScoreStore();
+            var gameOverPresenter = new ScriptedGameOverPresenter(false);
             var gameOverGameState = new GameOverGameState(
-                player, new ScriptedGameOverPresenter(false), highScoreTable, highScoreStore);
+                player, gameOverPresenter, highScoreTable, highScoreStore);
 
             Assert.AreEqual(GameStateEnum.None, await gameOverGameState.Running());
 
             Assert.AreEqual(1, highScoreStore.SaveCount);
             Assert.AreSame(highScoreTable, highScoreStore.LastSaved);
             Assert.AreEqual(100, highScoreTable.BestScore);
+            // Rank 1 is the signal the NEW-record badge reads.
+            Assert.AreEqual(new[] { 1 }, gameOverPresenter.ShownRanks);
+        }
+
+        [Test]
+        public async Task GameOver_ReportsPlacedButNotRecord_WhenScoreOnlyTiesTheBest()
+        {
+            // Regression for the NEW badge firing on a tie: the presenter used to infer
+            // "new record" from BestScore == Score, but TrySubmit places ties *after* the
+            // incumbent, so matching the best is a placement (rank 2), never a record.
+            var player = new Player { hp = 20 };
+            player.Initialize();
+            player.EatBoba();  // Score = 100
+            player.Damaged();  // dead
+
+            var highScoreTable = new HighScoreTable();
+            highScoreTable.TrySubmit(100, System.DateTime.UtcNow); // an incumbent 100 already stands
+            var highScoreStore = new RecordingHighScoreStore();
+            var gameOverPresenter = new ScriptedGameOverPresenter(false);
+            var gameOverGameState = new GameOverGameState(
+                player, gameOverPresenter, highScoreTable, highScoreStore);
+
+            await gameOverGameState.Running();
+
+            Assert.AreEqual(100, highScoreTable.BestScore);
+            Assert.AreEqual(new[] { 2 }, gameOverPresenter.ShownRanks);
         }
 
         [Test]
@@ -86,14 +113,16 @@ namespace BobaKami.Tests
 
             var highScoreTable = new HighScoreTable();
             var highScoreStore = new RecordingHighScoreStore();
+            var gameOverPresenter = new ScriptedGameOverPresenter(false);
             var gameOverGameState = new GameOverGameState(
-                player, new ScriptedGameOverPresenter(false), highScoreTable, highScoreStore);
+                player, gameOverPresenter, highScoreTable, highScoreStore);
 
             Assert.IsTrue(player.IsAlive);
             await gameOverGameState.Running();
 
             Assert.AreEqual(0, highScoreStore.SaveCount);
             Assert.AreEqual(0, highScoreTable.Entries.Count);
+            Assert.AreEqual(new[] { 0 }, gameOverPresenter.ShownRanks);
         }
     }
 }

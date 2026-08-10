@@ -106,19 +106,29 @@ threshold ±0.3 → Left/Forward/Right) and `MouthOpenVariable : Variable<bool>`
   and `KeyButton` (`Move` = WASD/arrows/gamepad stick+dpad, `Bite` = Space/buttonSouth),
   plus `UI` for the EventSystem. The Unity-template `Player` map and the vestigial
   `PlayerInput` object were deleted.
-- **Mode selection**: `InputModeController` (on `AlternativeInput`, now in **`Core.unity`**
-  so input sources are app-wide — needed for the Title standby's tap/bite start) reads
-  `InputModeVariable` (`Auto/FaceTracking/Pointer/KeyButton/PointerAndKeyButton`,
-  default Auto) and toggles the `PointerInput` / `KeyButtonInput` GameObjects plus a
-  cross-scene `FaceTrackingEnabledVariable` (it is the **single writer** of that flag —
-  drives the Title standby prompt). On `Start` it also **coerces** the persisted/default
-  mode to one legal on this platform via `InputModePolicy.Coerce`, so it — not the settings
-  UI — owns runtime mode state. Auto → FaceTracking on ARKit iOS, else
+- **Mode selection**: `InputModeController` (on `AlternativeInput`) reads `InputModeVariable`
+  (`Auto/FaceTracking/Pointer/KeyButton/PointerAndKeyButton`, default Auto) and toggles the
+  `PointerInput` / `KeyButtonInput` GameObjects. On `Start` it also **coerces** the
+  persisted/default mode to one legal on this platform via `InputModePolicy.Coerce`, so it —
+  not the settings UI — owns runtime mode state. Auto → FaceTracking on ARKit iOS, else
   Pointer+KeyButton both (per-device actions are inert when the device is absent).
-  It re-applies on `FaceTrackingAvailableVariable` changes (same-scene init-order race
-  with `FaceTrackingAdapter`). `FaceTrackingAdapter` (Core scene) finds the
-  `ARFaceManager` at runtime, publishes `FaceTrackingAvailableVariable`, and
-  enables/disables face tracking.
+  It re-applies on `FaceTrackingAvailableVariable` changes (init-order race with
+  `FaceTrackingAdapter`, which publishes that flag from another scene).
+  - ⚠ `AlternativeInput`, `PointerInput` and `KeyButtonInput` all live in **`Gameplay.unity`**,
+    *not* Core — input sources are **not** app-wide. (An earlier version of this file claimed
+    the move to Core had happened; it never did.) Consequence: while Title is up, none of these
+    exist, so nothing there can write `FaceTrackingEnabledVariable` and no pointer/key source
+    can raise `MouthOpenVariable`. Tap-to-start on Title is therefore a **UI `Button`** on
+    `StartScreen` (ModularScreens `TapToStartButton.prefab`) — deliberately *not* routed
+    through `MouthOpenVariable`, because a whole-screen touch would swallow the Settings
+    button's UI raycast. Don't "fix" it into a screen-wide touch.
+- `FaceTrackingAdapter` (Core scene, so loaded on every scene and re-`Start`ed by
+  `resetAppCommand`) finds the `ARFaceManager` at runtime, publishes
+  `FaceTrackingAvailableVariable`, enables/disables face tracking, and is the **single writer**
+  of `FaceTrackingEnabledVariable` (available *and* selected by the current mode). It writes
+  that flag *before* its `faceManager == null` guard, so a no-AR platform still publishes a
+  definite `false`. `InputModeController` used to write it too — from Gameplay, which meant the
+  Title prompt read a value last set by the previous gameplay session, or never set at all.
 - **Mode policy**: all platform/`Auto` rules live in the pure static `InputModePolicy`
   (`Resolve`/`ResolveAuto`/`AvailableModes`/`Coerce`) — the single home for the
   `#if UNITY_IOS/ANDROID` matrix, shared by the controller, adapter and toggle button
@@ -152,20 +162,38 @@ threshold ±0.3 → Left/Forward/Right) and `MouthOpenVariable : Variable<bool>`
 - Scene/app-level state is handled by the external `com.ripandy.appstatemanagement`
   module (`AppStateEnum`: Splash → MainMenu → Gameplay) across the `Core`/`Title`/`Gameplay` scenes.
 - Title flow (`Title.unity` → `Canvas`; code + assets in `Assets/2_Contents/Title/`), split
-  across two components: `MangaPanel.cs` (on `MangaPanels`) **only animates** the panels —
-  any button press or touch skips it — then activates its `standbyUI` handoff object and
-  disables itself. `StandbyUI.cs` (on the `StandbyUI` object, which starts **inactive** so its
-  Start waits until the handoff) awaits a `MouthOpenVariable` open→close edge (face bite, tap
-  release, Space/pad release — the uniform bite semantic) and raises `SetNextStateEvent`
-  ("Gameplay"). A 0.5 s grace window (`ignoreStartUntil`) swallows the release edge left over
-  from the skip press and re-arms on any `InputModeVariable` change (so a mode switch's own tap
-  doesn't start the game). `standbyUI` must be a **sibling**, not a child, of `MangaPanel`
-  (MangaPanel disables its own GameObject on handoff).
-- Title UI under `StandbyUI`: the prompt text is driven with **no script** — a SOAR
-  `BoolUnityEventBinder` listening to `FaceTrackingEnabledVariable` sets the TMP text to
-  "Bite to Start!" (true) / "Tap to Start!" (false). Alongside it sit a `TapToStart` visual
-  and a `SettingsMenuContainer` instance (ModularScreens module prefab) whose button calls
-  `ShowSettingsCommand.Show(Transform)`.
+  across two components. Order is **standby first, manga second** (reversed 2026-08-07):
+  `StandbyUI.cs` (on the `StandbyUI` object, which starts **active**) awaits a
+  `MouthOpenVariable` open→close edge (face bite, tap release, Space/pad release — the uniform
+  bite semantic), then activates its `mangaIntro` handoff object and disables itself.
+  `MangaPanel.cs` (on `MangaPanels`, which starts **inactive**) animates the panels — any button
+  press or touch skips it — and raises `SetNextStateEvent` ("Gameplay") when it finishes.
+  - **Why this order**: the manga used to play on Title load, so at a booth it ran to an empty
+    machine while the previous player walked away, and the next player arrived to nothing but the
+    idle screen. Running it after the start input guarantees it has an audience and makes it a
+    pre-gameplay cutscene rather than an unwatched attract loop.
+  - Each side has a 0.5 s grace window, and they guard mirror-image hazards. `StandbyUI`'s
+    `ignoreStartUntil` swallows the input-mode toggle tap and the Core splash-skip press (this
+    gate now runs the instant Title loads, not ~11 s later, so that press is still in flight), and
+    re-arms on any `InputModeVariable` change. `MangaPanel`'s `SkipGraceSeconds` swallows the
+    press that *started* the game — StandbyUI advances on the release edge, so without it the
+    manga would instantly skip itself on the very input that summoned it.
+  - The two objects must be **siblings**, not nested: each disables its own GameObject on handoff.
+- Title UI under `StandbyUI`: `StartPromptLabel.cs` (on the `StandbyUI` object) sets the TMP
+  text to "Bite to Start!" / "Tap to Start!" from `FaceTrackingEnabledVariable`, live, so the
+  wording follows the mode toggle that sits in the settings overlay **on this same screen**.
+  Alongside it sit a `TapToStart` visual and a `SettingsMenuContainer` instance (ModularScreens
+  module prefab) whose button calls `ShowSettingsCommand.Show(Transform)`.
+  - It **samples `.Value` on `Start` and then subscribes**, and that ordering is the whole
+    point: this was previously a script-free SOAR `BoolUnityEventBinder`, which could never
+    work. Core finishes loading before Title is added additively, so `FaceTrackingAdapter`'s
+    assignment happens before any Title-scene listener exists — a listen-only binder shows
+    whatever string was serialized. (It was also listening to a flag written only from
+    Gameplay; see Input architecture.)
+- `StandbyUI.Start` **resets `InputModeVariable` to `Auto`**. The variable is a
+  ScriptableObject, so it survives `resetAppCommand`'s `LoadScene("Core")` — without the reset,
+  one booth visitor switching to Touch leaves everyone after them in Touch until the app is
+  force-killed. Resetting on the standby screen re-arms the machine between visitors.
 - Menus are ModularScreens `ShowOverlayScreenCommand` assets (`Command<Transform>`: lazily
   instantiates its `overlayScreenPrefab`, re-parents + activates on `Show`, deactivates on
   `Hide`), configured per game in `Assets/2_Contents/Title/`:
@@ -191,13 +219,50 @@ threshold ±0.3 → Left/Forward/Right) and `MouthOpenVariable : Variable<bool>`
   `InputActionReference` sub-asset fileIDs are importer-hashed — those fields must be
   wired in the editor.
 
-## Progress log & next steps (updated 2026-07-27)
+## Progress log & next steps (updated 2026-08-08 — booth-lock commit)
 
 Roadmap feature numbers below refer to the original plan (the `temporal-hopping-sifakis.md`
-plan file is no longer on disk — treat this log as the source of truth). Hard deadline:
-**Tokyo Game Dungeon 13 booth, 2026-08-08**; App Store submission target ~Jul 25–28.
-Current branch: `main` (M1/`feature/scoring` merged 2026-07-27, `0cb8c08`). Next work
-(Feature 4) branches from `main`.
+plan file is no longer on disk — treat this log as the source of truth). The
+**Tokyo Game Dungeon 13 booth was 2026-08-08**; App Store submission slipped past its
+~Jul 25–28 target and is post-booth work.
+Current branch: `main`. Feature 4/`feature/high_score` merged 2026-07-30 (`aa2cbe7`),
+`af7972c` Unity bump to 6000.5.7f1, `fe2f225` app icon, then the booth-lock commit.
+
+### ⚠ READ FIRST IF THIS IS THE FIRST SESSION AFTER THE BOOTH
+
+The booth-lock commit was made **before the booth ran**, so nothing below is validated by
+real players. Two things to establish before planning anything:
+
+1. **Did a device build actually ship?** The last known blocker was `xcode-select` pointing at
+   `/Library/Developer/CommandLineTools`, which has no `actool` — the ARKit build processor
+   fails in `OnPreprocessBuild` with `ExecutionFailedException: actool ... exit code 72`. The
+   fix needs sudo: `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`, then
+   launch Xcode once. Verify with `xcode-select -p` before assuming the booth build happened.
+2. **What did the booth teach us?** Ask. The open questions the code is waiting on are: whether
+   face tracking is actually harder than touch (Feature 17 retuning + the parked score-multiplier
+   idea below), whether the 20 s game-over idle timeout is the right length, and whether players
+   watched the manga now that it plays after the start input.
+
+### Parked deliberately (do not just implement these — they were argued down)
+- **Face-tracking score multiplier.** `ScoreRules.MultiplierFaceFor` exists and is
+  **intentionally uncalled**. The goal was face/touch fairness on the high-score table; it
+  doesn't achieve that. `HighScoreEntry` records no input mode, so a multiplier makes scores
+  incomparable *invisibly*; the table is per-device (`persistentDataPath`, no network board) and
+  on the booth iPhone `Auto` resolves to FaceTracking, so nearly every entry is a face score and
+  scaling them all is a no-op for ranking. The proposed curve was also non-monotonic vs
+  `MultiplierFor` (2.00× at combo 0–4, **1.33×** at 10–14, 2.25× at 40–49). If revisited: add an
+  input-mode field to `HighScoreEntry` first (JsonUtility defaults missing fields, so old saves
+  still load — the same argument that put `initials` in early) and measure before picking a
+  constant.
+- **Moving `PointerInput`/`KeyButtonInput`/`AlternativeInput` into Core.** Architecturally right
+  (input sources would become genuinely app-wide) but `PointerInput` carries an importer-hashed
+  `inputActionReference` sub-asset fileID that must be wired in the editor, and nothing currently
+  needs the move. See the ⚠ note under Input architecture.
+- **`StandbyUI`'s reset of `InputModeVariable` to `Auto` conflicts with Feature 13.** It exists
+  so one booth visitor's mode switch can't persist to the next (the SO survives
+  `resetAppCommand`'s `LoadScene`). But an earlier startup `modes[0]` reset was deliberately
+  removed so a persisted choice could survive — this reintroduces that clobbering. When settings
+  persistence ships, make this booth-mode-only or drop it.
 
 ### Done
 - **M0 — rebrand** (merged): BobaKami namespaces/assets/repo; identity locked (see Overview).
@@ -238,9 +303,85 @@ Current branch: `main` (M1/`feature/scoring` merged 2026-07-27, `0cb8c08`). Next
   curve, HUD boba-count vs score split, game-over 3-stat screen, pace-resets-on-drop, and the
   full `Bean → Boba` rename. Detail retained below under *M1 — Feature 3 (done)*.
 
-### Immediate next
-4. **Feature 4 — local high-score table** — code landed on `feature/high_score`,
-   **editor wiring + verification still open**. ⚠ **Freeze point reached**: this ships
+### Immediate next — ship the device build (unresolved at booth-lock time)
+- **Ship a device build.** Two things gate it:
+  1. `xcode-select -p` points at `/Library/Developer/CommandLineTools`, but Xcode 26.6 is at
+     `/Applications/Xcode.app`. CLT ships no `actool`, so the ARKit build processor throws
+     `ExecutionFailedException: Execution of actool failed with exit code 72` /
+     `xcrun: error: unable to find utility "actool"` during `OnPreprocessBuild` — the build dies
+     before compiling. (Confirmed in `Logs/Editor.log`; `actool` exists only under
+     `/Applications/Xcode.app/Contents/Developer/usr/bin/`.) Fix (needs sudo):
+     `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`, then launch Xcode once.
+  2. Signing now lives in Player Settings (`appleEnableAutomaticSigning: 1`,
+     `appleDeveloperTeamID: 6C8R425ZPB`). It previously lived **only** in the exported
+     `Builds/Unity-iPhone.xcodeproj` (`DEVELOPMENT_TEAM = 6C8R425ZPB`, hand-set after each
+     export) — which is why Unity's fields could be empty while device installs worked. The
+     Jul 16 export predates the `6000.5.7f1` bump so **Append is unavailable**; this must be a
+     **Replace** build, which regenerates the pbxproj and would have dropped the hand-set team.
+  - The signing identity is `Apple Development: ripandy.adha@gmail.com (PKGT83N693)`, team
+    `6C8R425ZPB`, valid to 2027-07-15. Its provisioning profile lives at the **Xcode 16+ path**
+    `~/Library/Developer/Xcode/UserData/Provisioning Profiles/` — the legacy
+    `~/Library/MobileDevice/Provisioning Profiles/` is gone, so checking only there reads as
+    "no profiles installed" and is a false alarm.
+- Leave `bundleVersion: 0.1` / `buildNumber: 0` alone for a cable install (TestFlight would
+  need the build number off 0 and the 1024 App Store icon slot filled — the app icon is
+  currently assigned to the **Default** slot only, and Unity scales it into the empty iOS slots).
+
+### Done (booth prep)
+- **Title order reversed: standby first, manga second** (2026-08-08) — see App flow for the
+  mechanics and the why. `StandbyUI` starts active and hands off to `MangaPanels`; the tap
+  `Button` on `StartScreen` was rewired to the same handoff (`StandbyUI` off / `MangaPanels` on)
+  rather than raising `SetNextStateEvent` directly, so tapping no longer skips the manga.
+- **Title start prompt fixed** (2026-08-08): `FaceTrackingAdapter` (Core) is now the single
+  writer of `FaceTrackingEnabledVariable`, and `StartPromptLabel` renders it. Root cause of the
+  old broken prompt: the flag was written only by `InputModeController`, which lives in
+  **Gameplay.unity**, so nothing wrote it while Title was up. See Input architecture.
+- **Input mode resets to `Auto` on Title load** (2026-08-08) — booth stickiness fix; note the
+  Feature 13 conflict flagged under "Parked deliberately".
+- **PlayMode-stop exceptions fixed** (2026-08-08), both surfaced via
+  `UniTaskScheduler.PublishUnobservedTaskException`:
+  - `StandbyUI` — R3's `FirstAsync` throws `InvalidOperationException("Sequence contains no
+    elements")` when the SOAR observable *completes* without matching (scene unload), not OCE.
+    The handler caught only OCE. Now catches both. Pre-existing, but the standby-first reorder
+    made it fire on every stop.
+  - `GameplayStateMachine` — `destroyCancellationToken`'s getter throws
+    `MissingReferenceException` once the MonoBehaviour is destroyed, and the loop resumes from
+    its `await` after teardown. Token is now captured into a local before the loop
+    (`CancellationToken` is a struct). Also guarded so `resetAppCommand` only runs on a genuine
+    `None`, not on the way out of PlayMode. **Deliberately passes no token to
+    `ExecuteAsync`** despite the overload: `Soar.Commands.Command.ExecuteAsync` uses it only for
+    one `ThrowIfCancellationRequested` before a synchronous `Execute()`, already links
+    `Application.exitCancellationToken` internally, and the call destroys this very component.
+    (Revisit only if some command overrides `ExecuteAsync` with genuinely awaited work.)
+- **Feature 5 — new-record detection** (2026-08-07): `IGameOverPresenter.Show` gained an
+  `int highScoreRank` parameter, fed by `GameOverGameState.SubmitHighScore()` returning
+  `TrySubmit`'s rank; `GameOverPresenter` now lights the NEW badge on `rank == 1` instead of
+  `BestScore == stats.Score`, which also fired on a **tie** (ties place *after* the incumbent,
+  so matching the best is rank 2, never a record). Deliberately widened the port rather than
+  adding a SOAR `Variable<int>` + presenter interface: the SO route matches the dominant
+  pattern but costs an asset, an installer binding and a prefab field — editor wiring that was
+  not worth the risk the day before the booth. Revisit if a second consumer appears.
+- **Game-over idle timeout** (2026-08-07): `GameOverPresenter.OnFullView` had **no timeout**, so
+  a booth player who died and walked away froze the machine on the results screen forever.
+  Added `idleTimeoutSeconds` (default 20, `<= 0` waits forever so it can be disabled from the
+  Inspector without a rebuild). On timeout it returns **exit**, i.e. `GameStateEnum.None` →
+  `resetAppCommand` → `LoadScene("Core")`, so the booth returns to the Title standby prompt for
+  the next player rather than dropping them into a fresh run mid-stride. `OnFullView` also now
+  runs its awaiters on a linked CTS, so the losing button handlers / mouth subscription are torn
+  down per call instead of accumulating across restarts. The index of the mouth branch is derived
+  from `buttons.Length` rather than the old hard-coded `2`, and the 0/1 return codes are named
+  `RestartResult` / `ExitResult`.
+  - ⚠ This **depends on the standby-before-manga order**. It first shipped as *restart*, because
+    back then exiting landed the player behind ~3.3 s of splash **plus ~11 s of manga**, and
+    neither skip responds to a bite (both use `InputSystem.onAnyButtonPress` + touch), which
+    would strand a face-tracking booth. Reversing the Title order moved the manga after the start
+    gate, leaving only the self-ending splash in the way — which is what makes exit correct. If
+    the Title order is ever reverted, revisit this too.
+  - The Title standby (`StandbyUI`) waiting forever is **correct** and was left alone — it is the
+    "insert coin" screen, with a visible Bite/Tap prompt. Do not add a timer there.
+- **Feature 4 — local high-score table** (merged `aa2cbe7`, 2026-07-30; editor wiring and
+  device verification complete — `HighScoreData.asset` carries a real recorded run and
+  `autoResetValue: 0`). ⚠ **Freeze point reached**: this ships
    `persistentDataPath`, so `companyName` (WanderWonder Games) and bundle id
    (`com.ripandy.bobakami`) are **locked from here** — see Overview. Changing either orphans
    every existing save.
@@ -273,28 +414,23 @@ Current branch: `main` (M1/`feature/scoring` merged 2026-07-27, `0cb8c08`). Next
      `BindFromInstance(highScoreData.Value)` — `FromJsonString` replaces the instance rather than
      filling it, so binding first would bind a stale object.
    - **UI**: `GameOverPresenter` gained `highScoreData` + `bestScoreText` and sets BEST in
-     `AnimateStats`. It reads the SO directly instead of widening `IGameOverPresenter`, matching
-     how `GameStatPresenter` reads `GameStatsVariable`.
+     `AnimateStats`, reading the SO directly (matching how `GameStatPresenter` reads
+     `GameStatsVariable`). The **NEW badge** is the exception — it takes the rank through the
+     port, see Feature 5 above.
    - **Tests**: `Tests/HighScoreTableTests.cs` (ordering, rank, ties, capacity trim, cutoff
-     rejection, non-positive rejection, `Normalize`, timestamp round-trip) + two
-     `GameStateTests` cases for submit-on-death / no-submit-on-cancel, and a
-     `Dummies/RecordingHighScoreStore`. **61 assertions green** via the out-of-Unity dotnet route.
-   - ⏳ **Editor tasks still open** (must be done in Unity):
-     1. Create `HighScoreData.asset` (BobaKami → HighScoreData) in
-        `2_Contents/Gameplay/HighScore/`, with **`autoResetValue: 0`** (`PlayerData.asset` has
-        it at `1`; leaving it on wipes the table at PlayMode exit).
-     2. Assign it on `GameplayBindingInstaller` (Gameplay.unity) and on `GameOverPresenter`
-        (`GameOverScreen.prefab`); add the BEST `TMP_Text` and wire `bestScoreText`.
-     3. **Carried over from Feature 3**: the `ResultStats` group in `GameOverScreen.prefab` has a
-        3rd stat group (Score) offset to `y:-220` still needing arrangement (position/spacing,
-        optional `HorizontalLayoutGroup`, inner GO renames). Adding the BEST row is the moment.
-     4. Verify: PlayMode round-trip (die → BEST correct → stop → re-enter → BEST survived), then
-        on-device that the table survives an app kill (`persistentDataPath` differs from the
-        editor path, and this is the project's first disk write of any kind).
+     rejection, non-positive rejection, `Normalize`, timestamp round-trip) + `GameStateTests`
+     cases for submit-on-death / no-submit-on-cancel / tie-is-not-a-record, and a
+     `Dummies/RecordingHighScoreStore`. **62 tests green** via the out-of-Unity dotnet route
+     (note: that scratch project must target **net10.0** — only the .NET 10 runtime is installed
+     on this Mac, and a net8.0 target builds but aborts at test-host launch).
+   - Still open, cosmetic, **carried over from Feature 3**: the `ResultStats` group in
+     `GameOverScreen.prefab` has a 3rd stat group (Score) offset to `y:-220` that could use
+     arrangement (position/spacing, optional `HorizontalLayoutGroup`, inner GO renames).
 
 ### Then
-5. **Feature 5 — new-record detection**, then M2: Main Menu (6), booth mode (7),
-   initials entry (8). Settings UI (13) is now partly in place (`StandbySettingsMenuOverlay`
+5. M2: Main Menu (6), booth mode proper (7), initials entry (8) — note the game-over idle
+   timeout above already covers the single most booth-critical part of (7).
+   Settings UI (13) is now partly in place (`StandbySettingsMenuOverlay`
    hosts the `InputModeVariable` override) and still needs JSON persistence — the startup
    `modes[0]` reset was already removed (coercion now in `InputModeController` via
    `InputModePolicy.Coerce`), so a saved legal choice will survive startup once persisted.

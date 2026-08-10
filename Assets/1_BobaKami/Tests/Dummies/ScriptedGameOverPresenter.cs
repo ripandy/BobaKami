@@ -16,14 +16,19 @@ namespace BobaKami.Tests
 
         public List<GameStatsDto> ShownStats { get; } = new();
 
+        /// <summary>The high-score rank passed to each <see cref="Show"/> call, in order.</summary>
+        public List<int> ShownRanks { get; } = new();
+
         public ScriptedGameOverPresenter(params bool[] answers)
         {
             restartAnswers = new Queue<bool>(answers);
         }
 
-        public ValueTask<bool> Show(GameStatsDto stats, CancellationToken cancellationToken = default)
+        public ValueTask<bool> Show(GameStatsDto stats, int highScoreRank,
+            CancellationToken cancellationToken = default)
         {
             ShownStats.Add(stats);
+            ShownRanks.Add(highScoreRank);
             return new ValueTask<bool>(restartAnswers.Count > 0 && restartAnswers.Dequeue());
         }
     }
