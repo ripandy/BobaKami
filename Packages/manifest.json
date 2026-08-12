@@ -15,6 +15,7 @@
     "com.ripandy.soar": "file:./../../SOAR",
     "com.ripandy.soarextensions": "file:./../../ModuleCollections/SoarExtensions",
     "com.ripandy.transformmanagement": "file:./../../ModuleCollections/TransformManagement",
+    "com.ripandy.uianimation": "file:./../../ModuleCollections/UIAnimation",
     "com.unity.editorcoroutines": "1.1.0",
     "com.unity.feature.2d": "2.0.2",
     "com.unity.ide.rider": "3.0.40",
