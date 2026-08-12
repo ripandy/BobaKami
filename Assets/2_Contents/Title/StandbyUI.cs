@@ -41,12 +41,6 @@ namespace BobaKami.MainMenu
 
         private async UniTaskVoid Start()
         {
-            // Booth hygiene: InputModeVariable is a ScriptableObject, so it survives
-            // resetAppCommand's LoadScene("Core"). Without this, one player switching to Touch
-            // leaves every player after them in Touch until the app is force-killed. Resetting
-            // here (rather than on app quit) means the machine re-arms itself between visitors.
-            if (inputMode != null) inputMode.Value = InputModeEnum.Auto;
-
             ignoreStartUntil = Time.unscaledTime + StartInputGraceSeconds;
             using var toggleSubscription = inputMode == null
                 ? null

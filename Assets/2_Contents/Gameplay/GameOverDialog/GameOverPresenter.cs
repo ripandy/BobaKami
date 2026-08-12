@@ -31,10 +31,6 @@ namespace BobaKami.Gameplay
         [SerializeField] private CanvasGroup canvasGroup;
         [SerializeField] private float fadeDuration = 0.5f;
 
-        [Tooltip("Booth safety net: if nobody answers the game-over screen within this many " +
-                 "seconds, return to the Title standby screen. Set to 0 to wait forever.")]
-        [SerializeField] private float idleTimeoutSeconds = 20f;
-
         // OnFullView's return codes. Index 0 is the RestartButton and index 1 the ExitButton,
         // so these double as the button indices; Show maps RestartResult to "replay".
         private const int RestartResult = 0;
@@ -117,8 +113,8 @@ namespace BobaKami.Gameplay
 
         private async UniTask<int> OnFullView(CancellationToken cancellationToken = default)
         {
-            // Linked so the losing awaiters (button handlers, the mouth subscription, the idle
-            // delay) are torn down when this call resolves instead of living until app quit.
+            // Linked so the losing awaiters (button handlers, the mouth subscription) are torn
+            // down when this call resolves instead of accumulating across restarts.
             using var viewCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = viewCts.Token;
 
@@ -128,21 +124,7 @@ namespace BobaKami.Gameplay
             tasks.Add(mouthOpenEvent.AsObservable().Distinct().Where(opened => !opened)
                 .FirstAsync(cancellationToken: token).AsUniTask());
 
-            var timeoutIndex = -1;
-            if (idleTimeoutSeconds > 0f)
-            {
-                timeoutIndex = tasks.Count;
-                tasks.Add(UniTask.Delay(TimeSpan.FromSeconds(idleTimeoutSeconds), cancellationToken: token));
-            }
-
             var result = await UniTask.WhenAny(tasks);
-
-            // Nobody answered — the player walked off. Exit to the Title standby rather than
-            // restarting, so the booth returns to its "insert coin" prompt for whoever arrives
-            // next instead of dropping them mid-run. Safe now that the standby gate runs before
-            // the manga: the only thing between here and that prompt is the splash, which ends
-            // on its own. (Before that reversal the manga sat in the way, unskippable by bite.)
-            if (result == timeoutIndex) return ExitResult;
 
             if (result == mouthIndex)
             {
