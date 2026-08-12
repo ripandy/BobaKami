@@ -923,10 +923,8 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 707638880}
-  - {fileID: 1996351154}
-  - {fileID: 110183027}
   - {fileID: 6544182803078323400}
+  - {fileID: 110183027}
   m_Father: {fileID: 932541890}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.2}
@@ -1067,7 +1065,6 @@ GameObject:
   - component: {fileID: 707638880}
   - component: {fileID: 707638882}
   - component: {fileID: 707638881}
-  - component: {fileID: 707638883}
   m_Layer: 5
   m_Name: Boba
   m_TagString: Untagged
@@ -1087,7 +1084,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 583341219}
+  m_Father: {fileID: 6544182803078323400}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 17.177}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -1132,21 +1129,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 707638879}
   m_CullTransparentMesh: 1
---- !u!114 &707638883
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 707638879}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7668682246554329a14c94a8458c703b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: ModularScreens::Ripandy.ModularScreens.MainMenu.BubblyAnimation
-  scaleValueX: 1.08
-  scaleValueY: 1.06
-  animDuration: 0.5
 --- !u!1 &727060155
 GameObject:
   m_ObjectHideFlags: 0
@@ -1976,7 +1958,6 @@ GameObject:
   - component: {fileID: 1996351154}
   - component: {fileID: 1996351156}
   - component: {fileID: 1996351155}
-  - component: {fileID: 1996351157}
   m_Layer: 5
   m_Name: Face
   m_TagString: Untagged
@@ -1996,7 +1977,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 583341219}
+  m_Father: {fileID: 6544182803078323400}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: -13.346}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -2041,21 +2022,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1996351153}
   m_CullTransparentMesh: 1
---- !u!114 &1996351157
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1996351153}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7668682246554329a14c94a8458c703b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: ModularScreens::Ripandy.ModularScreens.MainMenu.BubblyAnimation
-  scaleValueX: 1.08
-  scaleValueY: 1.06
-  animDuration: 0.5
 --- !u!1 &2083696712
 GameObject:
   m_ObjectHideFlags: 0
@@ -2179,6 +2145,8 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
+  - {fileID: 707638880}
+  - {fileID: 1996351154}
   - {fileID: 6544182802231031956}
   - {fileID: 768346792}
   - {fileID: 32916447}
@@ -2203,7 +2171,7 @@ GameObject:
   - component: {fileID: 6544182803078323400}
   - component: {fileID: 6544182803078323402}
   m_Layer: 5
-  m_Name: Bobas
+  m_Name: JitterImages
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2219,7 +2187,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 82cce3f4070246578d185d6242949235, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UIAnimation::Ripandy.UIAnimation.ImageJitterAnimation
   positionDelta: 5
   rotationMultiplier: 1.6
