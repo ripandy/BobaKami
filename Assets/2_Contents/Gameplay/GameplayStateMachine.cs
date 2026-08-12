@@ -37,7 +37,6 @@ namespace BobaKami.Gameplay
             var activeState = initialState;
             while (activeState != GameStateEnum.None && !cancellationToken.IsCancellationRequested)
             {
-                Debug.Log($"Running {activeState}");
                 activeState = await gameStates[activeState].Running(cancellationToken);
             }
 

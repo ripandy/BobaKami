@@ -15,7 +15,11 @@ also has WebGL and macOS build configs. Active Input Handling is **Input System 
 App identity (locked): productName `BobaKami`, companyName `WanderWonder Games`,
 bundle id `com.ripandy.bobakami` (final — `overrideDefaultApplicationIdentifier`
 must stay `1`, or Unity re-derives the id from companyName). companyName must not
-change once high-score persistence ships (it changes `persistentDataPath`).
+change now that high-score persistence has shipped — it changes `persistentDataPath`
+and orphans every existing save.
+
+Version is `bundleVersion: 1.0` / `buildNumber.iPhone: 1`, targeting the first App Store
+release. **Bump the build number on every upload**; App Store Connect rejects a repeat.
 
 ## Project setup
 
@@ -40,8 +44,14 @@ Tests use Unity Test Framework (NUnit). The `BobaKami.Tests` assembly is **EditM
 - In-editor: run via **Window → General → Test Runner → EditMode**.
 - CLI (headless, fails if the project is open in an editor):
   ```
-  Unity -batchmode -runTests -projectPath . -testPlatform EditMode -testResults results.xml -quit
+  Unity -batchmode -runTests -projectPath . -testPlatform EditMode -testResults results.xml
   ```
+  ⚠ **Do not add `-quit`** (an earlier version of this file did). Unity shuts down before the
+  test runner engages, so it exits 0, writes no results file, and never even builds
+  `BobaKami.Tests.dll` — it looks like a clean pass and is actually a no-op. `-runTests` quits
+  on its own when the run finishes. The full-path binary is
+  `/Applications/Unity/Hub/Editor/6000.5.7f1/Unity.app/Contents/MacOS/Unity`. A run takes
+  ~1–2 min including reimport; **62 tests as of Feature 4, 77 after BK-03.**
 - Run a single test/class: add `-testFilter "BobaKami.Tests.<ClassOrMethod>"`.
 - **Fast out-of-Unity run:** domain + tests are fully UnityEngine-free, so a scratch
   dotnet NUnit project compiling `Assets/1_BobaKami/**/*.cs` (exclude `AssemblyInfo.cs`,
@@ -68,8 +78,12 @@ Pure C#. The asmdef sets `noEngineReferences: true` and `autoReferenced: false`,
   spinning on it stack-overflowed the editor at PlayMode end before). **No `async void`
   anywhere; no UniTask in the domain** (adapters use `UniTaskVoid` for fire-and-forget).
 - `Interfaces/` — the **ports**: presenter interfaces (e.g. `IPlayerHealthPresenter`,
-  `IBobaPresenter`) the domain pushes output to, and input-provider interfaces
-  (e.g. `IPlayerDirectionInputProvider`, `IPlayerBiteInputProvider`) it awaits input from.
+  `IBobaPresenter`) the domain pushes output to, input-provider interfaces
+  (e.g. `IPlayerDirectionInputProvider`, `IPlayerBiteInputProvider`) it awaits input from, and
+  plain query ports (`IHighScoreStore`, `IFaceTrackingStateProvider`). Query ports stay as
+  narrow as the decision they inform — `IFaceTrackingStateProvider` is a single `bool`, not an
+  input-mode enum, because which *mode* is active is an adapter concern and only the face/touch
+  distinction changes how a score ranks.
 - `DataTransferObjects/`, `Tests/`.
 
 ### `Assets/2_Contents` — Unity adapters (`BobaKami.Contents` assembly)
@@ -86,6 +100,14 @@ MonoBehaviours render by subscribing reactively, e.g. `HealthBarHUD` calls
 `Gameplay/` (`Player`, `Boba`, `HUD`, `InputProviders`, `LevelIntro`, `GameOverDialog`),
 plus `Title/` (manga intro, standby screen, settings/about overlay assets).
 
+Purely visual, game-agnostic behaviour belongs in a **ModuleCollections package**, not here. The
+Title logo's wobble is `ImageJitterAnimation` from `com.ripandy.uianimation`
+(`JitterAnimation<T> where T : Graphic`, with `Text`/`Image`/`Graphic` subclasses — Unity cannot
+add an open generic MonoBehaviour, so the base is abstract, the same shape SOAR uses for
+`Variable<T>`). That package exists because the effect had already been copy-pasted from
+ModularScreens' `SplashTextAnimation` into a local `BobaAnimation`, carrying its bugs along; see
+BK-02.
+
 ### Dependency injection — Doinject
 - `GameplayBindingInstaller : MonoBehaviour, IBindingInstaller` wires everything in
   `Install(DIContainer, ...)`: it binds the domain game-states as singletons and
@@ -95,7 +117,7 @@ plus `Title/` (manga intro, standby screen, settings/about overlay assets).
   via `[Inject] Construct(...)` and runs the loop: repeatedly `await state.Running(ct)`,
   switch to the returned `GameStateEnum`, and on `None` execute the SOAR `resetAppCommand`.
 
-### Input architecture (Feature 2, implemented)
+### Input architecture (shipped; was Feature 2 under the retired numbering)
 All inputs funnel into two SOAR signals the domain awaits — `faceVector`
 (`FaceDirectionConverterVectorVariable : Variable<Vector2>`, x in [-1,1], absolute
 threshold ±0.3 → Left/Forward/Right) and `MouthOpenVariable : Variable<bool>`
@@ -129,6 +151,12 @@ threshold ±0.3 → Left/Forward/Right) and `MouthOpenVariable : Variable<bool>`
   that flag *before* its `faceManager == null` guard, so a no-AR platform still publishes a
   definite `false`. `InputModeController` used to write it too — from Gameplay, which meant the
   Title prompt read a value last set by the previous gameplay session, or never set at all.
+  - `FaceTrackingEnabledVariable` is a **real class** (`Variable<bool>, IFaceTrackingStateProvider`),
+    not a plain SOAR `BoolVariable` asset, since BK-03: it doubles as the domain port that decides
+    which high-score table a finished run belongs in. Adding the class meant re-pointing the
+    existing asset's `m_Script` guid; the scene references are by *asset* guid
+    (`71c02dc6af80414a94b85cc441033aa1`) so they were unaffected. `FaceTrackingAdapter` is still
+    the single writer — the port only added a reader.
 - **Mode policy**: all platform/`Auto` rules live in the pure static `InputModePolicy`
   (`Resolve`/`ResolveAuto`/`AvailableModes`/`Coerce`) — the single home for the
   `#if UNITY_IOS/ANDROID` matrix, shared by the controller, adapter and toggle button
@@ -190,10 +218,14 @@ threshold ±0.3 → Left/Forward/Right) and `MouthOpenVariable : Variable<bool>`
     assignment happens before any Title-scene listener exists — a listen-only binder shows
     whatever string was serialized. (It was also listening to a flag written only from
     Gameplay; see Input architecture.)
-- `StandbyUI.Start` **resets `InputModeVariable` to `Auto`**. The variable is a
-  ScriptableObject, so it survives `resetAppCommand`'s `LoadScene("Core")` — without the reset,
-  one booth visitor switching to Touch leaves everyone after them in Touch until the app is
-  force-killed. Resetting on the standby screen re-arms the machine between visitors.
+- `StandbyUI` **no longer resets `InputModeVariable`** (removed in BK-01). The booth build reset
+  it to `Auto` on every Title load so one visitor's switch to Touch couldn't persist to the next
+  — `InputModeVariable` is a ScriptableObject and survives `resetAppCommand`'s
+  `LoadScene("Core")`. That is kiosk behavior: on someone's own phone it silently discarded a
+  deliberate choice, and it was the thing blocking settings persistence (**BK-07**). It still
+  **subscribes** to `inputMode` — that re-arms the 0.5 s `ignoreStartUntil` grace window when the
+  mode toggle is used, which is a real UX guard and unrelated to the booth.
+  The booth behavior is preserved at tag `TokyoGameDungeon13_20260808`.
 - Menus are ModularScreens `ShowOverlayScreenCommand` assets (`Command<Transform>`: lazily
   instantiates its `overlayScreenPrefab`, re-parents + activates on `Show`, deactivates on
   `Hide`), configured per game in `Assets/2_Contents/Title/`:
@@ -203,8 +235,13 @@ threshold ±0.3 → Left/Forward/Right) and `MouthOpenVariable : Variable<bool>`
     WanderWonder logo), fed by `CreditsInfoCollection.asset`.
   Keeping these as **project-local prefabs/assets** is deliberate: the module ships the generic
   screens, the game owns its content and wiring.
-- `Assets/4_Network` + `NetworkManagement` / `BlendShapeBroadcast*` handle MagicOnion
-  client–server streaming of face blendshape data.
+- **There is no networking in this project.** An earlier version of this file described an
+  `Assets/4_Network` + `NetworkManagement` / `BlendShapeBroadcast*` MagicOnion subsystem; it
+  does not exist on `main`, only on the `origin/research/magic_onion` branch, and
+  `BlendShapeBroadcastClient` is not in `Packages/manifest.json`. Nothing under `Assets/` makes
+  a network call — no `UnityWebRequest`, `HttpClient`, `Socket`, `GrpcChannel`, or `http://`.
+  Keep it that way unless a feature genuinely needs it: it is why the App Store privacy
+  answers are "no data collected" and why no privacy manifest is required.
 
 ## Conventions
 - Keep all game logic in `BobaKami` (no Unity types). To surface new state/input,
@@ -217,54 +254,105 @@ threshold ±0.3 → Left/Forward/Right) and `MouthOpenVariable : Variable<bool>`
   sleeps, and they **throw OCE on cancellation** to mirror the SOAR port contract.
 - Editing scenes/assets from outside Unity is fine for known GUIDs, but
   `InputActionReference` sub-asset fileIDs are importer-hashed — those fields must be
-  wired in the editor.
+  wired in the editor. When adding a script outside Unity, hand-write its `.meta` with a fresh
+  GUID (`uuidgen | tr -d '-' | tr 'A-Z' 'a-z'`) so other assets can reference it immediately.
+- **Re-pointing an asset at a new script** (`m_Script` guid) keeps every reference to that
+  *asset* intact — scenes and prefabs reference assets by asset GUID, not script GUID. This is
+  how `FaceTrackingEnabledVariable` gained a class without rewiring anything (BK-03), and how
+  `SplashTextAnimation` kept its prefabs while its body moved to a package (BK-02).
+- **Don't copy-paste a component between projects.** Both times it happened here the copy
+  silently inherited the original's bugs and doubled the cost of fixing them. Extract it into a
+  ModuleCollections package and leave a thin subclass behind at the old type name so existing
+  prefabs keep resolving by GUID.
 
-## Progress log & next steps (updated 2026-08-08 — booth-lock commit)
+## Progress log & next steps (updated 2026-08-13 — post-booth, App Store 1.0)
 
-Roadmap feature numbers below refer to the original plan (the `temporal-hopping-sifakis.md`
-plan file is no longer on disk — treat this log as the source of truth). The
-**Tokyo Game Dungeon 13 booth was 2026-08-08**; App Store submission slipped past its
-~Jul 25–28 target and is post-booth work.
-Current branch: `main`. Feature 4/`feature/high_score` merged 2026-07-30 (`aa2cbe7`),
-`af7972c` Unity bump to 6000.5.7f1, `fe2f225` app icon, then the booth-lock commit.
+The **Tokyo Game Dungeon 13 booth ran 2026-08-08**. The build that ran there is preserved at
+tag **`TokyoGameDungeon13_20260808`** (merge commit `3773be3` on `main`); check it out to
+rebuild the kiosk configuration for a future event. Work since then targets the first App Store
+release and lives on `release/1.0`.
 
-### ⚠ READ FIRST IF THIS IS THE FIRST SESSION AFTER THE BOOTH
+### ⚠ Feature numbering restarted — read before citing a number
 
-The booth-lock commit was made **before the booth ran**, so nothing below is validated by
-real players. Two things to establish before planning anything:
+The original roadmap (`temporal-hopping-sifakis.md`) is gone. Only Features 1–8, 13 and 17 were
+ever cited in this file, so **9–12 and 14–16 are unrecoverable**. Rather than plan around holes,
+the numbering was restarted on 2026-08-13 under a distinct **`BK-NN`** prefix.
 
-1. **Did a device build actually ship?** The last known blocker was `xcode-select` pointing at
-   `/Library/Developer/CommandLineTools`, which has no `actool` — the ARKit build processor
-   fails in `OnPreprocessBuild` with `ExecutionFailedException: actool ... exit code 72`. The
-   fix needs sudo: `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`, then
-   launch Xcode once. Verify with `xcode-select -p` before assuming the booth build happened.
-2. **What did the booth teach us?** Ask. The open questions the code is waiting on are: whether
-   face tracking is actually harder than touch (Feature 17 retuning + the parked score-multiplier
-   idea below), whether the 20 s game-over idle timeout is the right length, and whether players
-   watched the manga now that it plays after the start input.
+- **Old "Feature N" labels are historical only.** They still appear in commit messages, the
+  branch name `feature/high_score`, and the Done sections below. Don't create new ones, and
+  don't assume a bare number refers to the new scheme — that ambiguity is exactly why the
+  prefix changed rather than the numbers restarting at 1.
+- **`BK-NN` IDs are never reused or renumbered.** A dropped item is marked closed, not recycled.
 
-### Parked deliberately (do not just implement these — they were argued down)
-- **Face-tracking score multiplier.** `ScoreRules.MultiplierFaceFor` exists and is
-  **intentionally uncalled**. The goal was face/touch fairness on the high-score table; it
-  doesn't achieve that. `HighScoreEntry` records no input mode, so a multiplier makes scores
-  incomparable *invisibly*; the table is per-device (`persistentDataPath`, no network board) and
-  on the booth iPhone `Auto` resolves to FaceTracking, so nearly every entry is a face score and
-  scaling them all is a no-op for ranking. The proposed curve was also non-monotonic vs
-  `MultiplierFor` (2.00× at combo 0–4, **1.33×** at 10–14, 2.25× at 40–49). If revisited: add an
-  input-mode field to `HighScoreEntry` first (JsonUtility defaults missing fields, so old saves
-  still load — the same argument that put `initials` in early) and measure before picking a
-  constant.
+#### Shipping in 1.0 — all landed 2026-08-13
+
+| ID | Feature | Status |
+|---|---|---|
+| **BK-01** | Booth-mode removal, preserved as the `TokyoGameDungeon13_20260808` tag | done |
+| **BK-02** | Generic UI jitter-animation module + Title logo restyle | done |
+| **BK-03** | Separate face / touch high-score tables | done |
+| **BK-04** | App Store 1.0 submission prep | code done; device build + submission outstanding |
+
+#### Post-1.0
+
+| ID | Feature | Notes |
+|---|---|---|
+| **BK-05** | Initials entry | Format is already migration-free — `HighScoreEntry.initials` ships unused |
+| **BK-06** | High-score table viewer (top 10) | Needs BK-03 (done); best built *with* BK-05 — see below |
+| **BK-07** | Settings persistence (input mode survives relaunch) | Unblocked by BK-01; was old Feature 13 |
+| **BK-08** | Main Menu | Was old Feature 6 |
+
+#### Backlog, unscheduled
+
+| ID | Feature | Notes |
+|---|---|---|
+| **BK-09** | Difficulty retuning | Was old Feature 17. The booth says difficulty is fine — no longer urgent |
+| **BK-10** | Branded iOS launch screen | Currently Unity's generic storyboard |
+| **BK-11** | Boba object pooling | The `BobaPresenter.cs` TODO |
+
+**BK-06 is deliberately deferred, not forgotten.** `HighScoreData` already holds the full top-10
+and `HighScoreTable.EntriesFor(bool)` returns it, so the viewer is pure presentation: a
+`HighScoreOverlay.prefab` + `ShowHighScoreCommand.asset` (a ModularScreens
+`ShowOverlayScreenCommand`) and a button on `StandbyUI`, exactly like the Settings and About
+overlays already wired there. It waits because it needs a face/touch tab to be meaningful, and
+because a table of ten anonymous numbers is much weaker than one with initials — do
+**BK-05 → BK-06 together** and build the row layout once.
+
+### What the booth taught us (2026-08-08, from the user)
+
+- **Difficulty felt about right.** The pace curve and 5-heart fail model ship unchanged; BK-09
+  is backlog, not pre-submission work.
+- **Players did watch the manga.** The standby-before-manga order (see App flow) is validated —
+  keep it.
+- **Face and touch scores need separate tables**, which became BK-03. This *replaced* the
+  face-tracking score multiplier rather than implementing it.
+- No clean quantitative observations were taken, so treat any specific tuning number as
+  unmeasured.
+
+### Closed — do not resurrect
+
+- **Booth mode as a runtime flag.** A `BoothModeVariable` gating the idle timeout and the input
+  mode reset was considered and rejected: the booth build is recoverable from the
+  `TokyoGameDungeon13_20260808` tag, which costs the shipping app nothing.
+- **Face-tracking score multiplier.** `ScoreRules.MultiplierFaceFor` was documented here as
+  existing and intentionally uncalled — **it never existed in the code**. The idea is now closed
+  for good: its flaw was making scores incomparable *invisibly*, and BK-03's separate tables make
+  the distinction explicit instead. Don't reintroduce a multiplier.
+- **`StandbyUI`'s `InputModeVariable` reset.** Removed in BK-01; it conflicted with BK-07. See
+  App flow.
+
+### Still parked (argued down, but not wrong)
+
 - **Moving `PointerInput`/`KeyButtonInput`/`AlternativeInput` into Core.** Architecturally right
   (input sources would become genuinely app-wide) but `PointerInput` carries an importer-hashed
   `inputActionReference` sub-asset fileID that must be wired in the editor, and nothing currently
   needs the move. See the ⚠ note under Input architecture.
-- **`StandbyUI`'s reset of `InputModeVariable` to `Auto` conflicts with Feature 13.** It exists
-  so one booth visitor's mode switch can't persist to the next (the SO survives
-  `resetAppCommand`'s `LoadScene`). But an earlier startup `modes[0]` reset was deliberately
-  removed so a persisted choice could survive — this reintroduces that clobbering. When settings
-  persistence ships, make this booth-mode-only or drop it.
+- **Removing `com.ripandy.debugtools` from `Packages/manifest.json`.** As of BK-04 nothing under
+  `Assets/` references it — the `DebugCamera` objects that used it are gone. Left installed
+  deliberately: it is a development tool worth having available in the editor, and the cost in
+  the player is negligible. Drop it if the dependency ever becomes awkward.
 
-### Done
+### Done — historical, using the retired "Feature N" numbering
 - **M0 — rebrand** (merged): BobaKami namespaces/assets/repo; identity locked (see Overview).
 - **Feature 1 — touch input** and **Feature 2 — input modes** (see Input architecture
   above), including bug-fix rounds: PlayMode-end stack-overflow crash (async-void
@@ -303,29 +391,53 @@ real players. Two things to establish before planning anything:
   curve, HUD boba-count vs score split, game-over 3-stat screen, pace-resets-on-drop, and the
   full `Bean → Boba` rename. Detail retained below under *M1 — Feature 3 (done)*.
 
-### Immediate next — ship the device build (unresolved at booth-lock time)
-- **Ship a device build.** Two things gate it:
-  1. `xcode-select -p` points at `/Library/Developer/CommandLineTools`, but Xcode 26.6 is at
-     `/Applications/Xcode.app`. CLT ships no `actool`, so the ARKit build processor throws
-     `ExecutionFailedException: Execution of actool failed with exit code 72` /
-     `xcrun: error: unable to find utility "actool"` during `OnPreprocessBuild` — the build dies
-     before compiling. (Confirmed in `Logs/Editor.log`; `actool` exists only under
-     `/Applications/Xcode.app/Contents/Developer/usr/bin/`.) Fix (needs sudo):
-     `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`, then launch Xcode once.
-  2. Signing now lives in Player Settings (`appleEnableAutomaticSigning: 1`,
-     `appleDeveloperTeamID: 6C8R425ZPB`). It previously lived **only** in the exported
-     `Builds/Unity-iPhone.xcodeproj` (`DEVELOPMENT_TEAM = 6C8R425ZPB`, hand-set after each
-     export) — which is why Unity's fields could be empty while device installs worked. The
-     Jul 16 export predates the `6000.5.7f1` bump so **Append is unavailable**; this must be a
-     **Replace** build, which regenerates the pbxproj and would have dropped the hand-set team.
-  - The signing identity is `Apple Development: ripandy.adha@gmail.com (PKGT83N693)`, team
-    `6C8R425ZPB`, valid to 2027-07-15. Its provisioning profile lives at the **Xcode 16+ path**
-    `~/Library/Developer/Xcode/UserData/Provisioning Profiles/` — the legacy
-    `~/Library/MobileDevice/Provisioning Profiles/` is gone, so checking only there reads as
-    "no profiles installed" and is a false alarm.
-- Leave `bundleVersion: 0.1` / `buildNumber: 0` alone for a cable install (TestFlight would
-  need the build number off 0 and the 1024 App Store icon slot filled — the app icon is
-  currently assigned to the **Default** slot only, and Unity scales it into the empty iOS slots).
+### Immediate next — ship the device build (BK-04, the only thing left for 1.0)
+
+All BK-04 *code* has landed. What remains needs a Mac with Xcode and a device:
+
+1. **`xcode-select` still points at the Command Line Tools** — verified again 2026-08-13:
+   `xcode-select -p` → `/Library/Developer/CommandLineTools`, while Xcode is at
+   `/Applications/Xcode.app`. CLT ships no `actool`, so the ARKit build processor throws
+   `ExecutionFailedException: Execution of actool failed with exit code 72` /
+   `xcrun: error: unable to find utility "actool"` during `OnPreprocessBuild` — the build dies
+   before compiling. **No iOS build can succeed until this is fixed.** Needs sudo:
+   `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`, then launch Xcode once.
+2. **This must be a Replace build, not Append.** The last export (`Builds/BobaKami_TGD13/`,
+   gitignored) predates the `6000.5.7f1` bump. Signing now lives in Player Settings
+   (`appleEnableAutomaticSigning: 1`, `appleDeveloperTeamID: 6C8R425ZPB`), so the regenerated
+   pbxproj picks the team up automatically — the old hand-set `DEVELOPMENT_TEAM` in the exported
+   project no longer needs re-applying after each export. `Assets/Editor/IosBuildPostProcessor.cs`
+   now owns anything else that must survive regeneration.
+   - The signing identity is `Apple Development: ripandy.adha@gmail.com (PKGT83N693)`, team
+     `6C8R425ZPB`, valid to 2027-07-15. Its provisioning profile lives at the **Xcode 16+ path**
+     `~/Library/Developer/Xcode/UserData/Provisioning Profiles/` — the legacy
+     `~/Library/MobileDevice/Provisioning Profiles/` is gone, so checking only there reads as
+     "no profiles installed" and is a false alarm.
+3. **Verify on device**, then on **iPad** — the project stays universal (`targetDevice: 2`,
+   `TARGETED_DEVICE_FAMILY = "1,2"`) by choice, and Apple reviews on iPad, where face tracking
+   needs TrueDepth. The touch fallback must be fully playable and the Title/HUD layouts must hold
+   at iPad aspect ratios. Narrowing to iPhone-only is the escape hatch if that goes badly.
+4. **TestFlight before submitting.** It exercises distribution signing and the export-compliance
+   plist without spending a review cycle.
+
+Version is now `bundleVersion: 1.0` / `buildNumber.iPhone: 1`. **Bump the build number on every
+upload** — App Store Connect rejects a repeat, and it was `0` before BK-04.
+
+**App Store Connect work, outside this repo**: app record and bundle-id registration, screenshots
+for every required iPhone *and* iPad size, description and keywords, privacy nutrition labels
+(camera use; no data collected or linked — the app makes no network calls at all), age rating, and
+an ARKit/face-tracking justification if review asks.
+
+Deliberately *not* changed for 1.0, with reasons:
+- **No app-level `PrivacyInfo.xcprivacy`.** Unity's engine manifest covers the required-reason
+  APIs, and the only app file I/O is `Application.persistentDataPath` via `HighScoreData`, which
+  is engine-mediated. Add one the moment a third-party SDK arrives.
+- **App icon slots stay empty.** Every explicit iPhone/iPad slot in `m_BuildTargetPlatformIcons`
+  is empty, but the legacy default (`Assets/2_Contents/Textures/App_Icon.png`) generates the whole
+  set — the TGD13 export contained a correct `Icon-Store-1024.png` at RGB with alpha stripped.
+  Verify in the new export rather than re-wiring slots.
+- **Launch screen** is Unity's generic storyboard — tracked as BK-10, not a blocker.
+- **Unity splash** cannot be removed on a Personal license.
 
 ### Done (booth prep)
 - **Title order reversed: standby first, manga second** (2026-08-08) — see App flow for the
@@ -336,8 +448,9 @@ real players. Two things to establish before planning anything:
   writer of `FaceTrackingEnabledVariable`, and `StartPromptLabel` renders it. Root cause of the
   old broken prompt: the flag was written only by `InputModeController`, which lives in
   **Gameplay.unity**, so nothing wrote it while Title was up. See Input architecture.
-- **Input mode resets to `Auto` on Title load** (2026-08-08) — booth stickiness fix; note the
-  Feature 13 conflict flagged under "Parked deliberately".
+- ~~**Input mode resets to `Auto` on Title load**~~ (2026-08-08) — booth stickiness fix,
+  **removed by BK-01** because it clobbered a deliberate choice on a personal device and blocked
+  BK-07. Preserved at tag `TokyoGameDungeon13_20260808`. See App flow.
 - **PlayMode-stop exceptions fixed** (2026-08-08), both surfaced via
   `UniTaskScheduler.PublishUnobservedTaskException`:
   - `StandbyUI` — R3's `FirstAsync` throws `InvalidOperationException("Sequence contains no
@@ -361,38 +474,40 @@ real players. Two things to establish before planning anything:
   adding a SOAR `Variable<int>` + presenter interface: the SO route matches the dominant
   pattern but costs an asset, an installer binding and a prefab field — editor wiring that was
   not worth the risk the day before the booth. Revisit if a second consumer appears.
-- **Game-over idle timeout** (2026-08-07): `GameOverPresenter.OnFullView` had **no timeout**, so
-  a booth player who died and walked away froze the machine on the results screen forever.
-  Added `idleTimeoutSeconds` (default 20, `<= 0` waits forever so it can be disabled from the
-  Inspector without a rebuild). On timeout it returns **exit**, i.e. `GameStateEnum.None` →
-  `resetAppCommand` → `LoadScene("Core")`, so the booth returns to the Title standby prompt for
-  the next player rather than dropping them into a fresh run mid-stride. `OnFullView` also now
-  runs its awaiters on a linked CTS, so the losing button handlers / mouth subscription are torn
-  down per call instead of accumulating across restarts. The index of the mouth branch is derived
-  from `buttons.Length` rather than the old hard-coded `2`, and the 0/1 return codes are named
-  `RestartResult` / `ExitResult`.
-  - ⚠ This **depends on the standby-before-manga order**. It first shipped as *restart*, because
-    back then exiting landed the player behind ~3.3 s of splash **plus ~11 s of manga**, and
-    neither skip responds to a bite (both use `InputSystem.onAnyButtonPress` + touch), which
-    would strand a face-tracking booth. Reversing the Title order moved the manga after the start
-    gate, leaving only the self-ending splash in the way — which is what makes exit correct. If
-    the Title order is ever reverted, revisit this too.
-  - The Title standby (`StandbyUI`) waiting forever is **correct** and was left alone — it is the
-    "insert coin" screen, with a visible Bite/Tap prompt. Do not add a timer there.
+- ~~**Game-over idle timeout**~~ (2026-08-07, **removed by BK-01**): `idleTimeoutSeconds`
+  (default 20) returned **exit** — `GameStateEnum.None` → `resetAppCommand` →
+  `LoadScene("Core")` — when nobody answered the results screen, so a booth player who died and
+  walked away didn't freeze the machine. On a personal phone that yanks the player out of their
+  own results screen, so it is gone; preserved at tag `TokyoGameDungeon13_20260808`.
+  - **Kept** from that same change, because none of it is booth-specific: `OnFullView` runs its
+    awaiters on a **linked CTS**, so losing button handlers and the mouth subscription are torn
+    down per call instead of accumulating across restarts; the mouth branch index is derived from
+    `buttons.Length` rather than a hard-coded `2`; and the 0/1 return codes are named
+    `RestartResult` / `ExitResult`.
+  - The dependency on the standby-before-manga order died with the timeout. (It had first shipped
+    as *restart* because exiting once landed the player behind ~3.3 s of splash **plus ~11 s of
+    manga**, neither skippable by a bite, which would strand a face-tracking booth.)
+  - The Title standby (`StandbyUI`) waiting forever is **correct** and was always left alone — it
+    is the "insert coin" screen, with a visible Bite/Tap prompt. Do not add a timer there.
 - **Feature 4 — local high-score table** (merged `aa2cbe7`, 2026-07-30; editor wiring and
   device verification complete — `HighScoreData.asset` carries a real recorded run and
   `autoResetValue: 0`). ⚠ **Freeze point reached**: this ships
    `persistentDataPath`, so `companyName` (WanderWonder Games) and bundle id
    (`com.ripandy.bobakami`) are **locked from here** — see Overview. Changing either orphans
    every existing save.
+   - ⚠ **Superseded in part by BK-03**, which split one table into two (face vs. touch). The
+     JsonUtility constraints and ranking rules below all still hold; the signatures changed to
+     `TrySubmit(score, faceTracking, utcNow)` / `EntriesFor(bool)` / `BestScoreFor(bool)`, and
+     the face list deliberately kept the original `entries` field name so pre-split saves — all
+     of which were face runs — migrate for free.
    - **Domain** (`Assets/1_BobaKami/`): `Entities/HighScoreTable.cs` holds the top-10 table
      (`Capacity = 10`) plus the `HighScoreEntry` struct. Entry fields are **public fields, not
      properties** — `JsonableVariable<T>` serializes with `JsonUtility`, which only sees fields
      (this is why `GameStatsDto`, a property-only `readonly struct`, cannot be the persisted
      type, and why `PlayerData.asset` only ever stored `hp`). `recordedAtUtc` is an ISO-8601
      round-trip string because `JsonUtility` cannot serialize `DateTime`; an unused `initials`
-     field is already in the format so Feature 8 needs no migration.
-     `TrySubmit(score, utcNow)` returns the **1-based rank** (0 = did not place) — Feature 5's
+     field is already in the format so **BK-05** needs no migration.
+     `TrySubmit(...)` returns the **1-based rank** (0 = did not place) — Feature 5's
      new-record detection is meant to read that return value. Rules: scores `<= 0` never place;
      **ties place after the incumbent** (you must beat a score, not match it); `Normalize()`
      repairs a loaded/hand-edited file (null list, wrong order, oversize) and uses a **stable**
@@ -428,12 +543,12 @@ real players. Two things to establish before planning anything:
      arrangement (position/spacing, optional `HorizontalLayoutGroup`, inner GO renames).
 
 ### Then
-5. M2: Main Menu (6), booth mode proper (7), initials entry (8) — note the game-over idle
-   timeout above already covers the single most booth-critical part of (7).
-   Settings UI (13) is now partly in place (`StandbySettingsMenuOverlay`
-   hosts the `InputModeVariable` override) and still needs JSON persistence — the startup
-   `modes[0]` reset was already removed (coercion now in `InputModeController` via
-   `InputModePolicy.Coerce`), so a saved legal choice will survive startup once persisted.
+
+After 1.0 ships: **BK-05 → BK-06 together** (initials entry, then the high-score viewer that
+finally makes the top-10 table visible), then **BK-07** settings persistence — the
+`StandbyUI` clobber that blocked it is gone, coercion already lives in `InputModeController` via
+`InputModePolicy.Coerce`, so a saved legal choice will survive startup as soon as it is
+persisted. **BK-08** Main Menu after that.
 
 ### M1 — Feature 3 (done) — reference detail
    - **Scoring**: pure static `ScoreRules` (`Assets/1_BobaKami/Entities/ScoreRules.cs`) is the
@@ -455,7 +570,7 @@ real players. Two things to establish before planning anything:
      post-hit slowdown an earlier pass called "defect 2"; it's a game-feel feature, not a bug.)
      `BobaLauncher` has a serialized `initialLaunchRate` floor that both `Initialize` (cross-restart
      leak) and `ResetLaunchRate` (per-drop) restore. **Curve shape and the 5-heart fail model are
-     untouched** — retuning is Feature 17; the fail model is frozen because Feature 4 persists scores.
+     untouched** — retuning is **BK-09**; the fail model is frozen because high-score persistence ships.
    - **Rename `Bean` → `Boba`** across domain, adapters, tests, asset/file names, the scene's
      serialized-field keys, and the `Bean` project tag (→ `Boba`, matched by
      `BiteInputHandler.CompareTag`). Domain now speaks the game's own noun; still fully
@@ -466,7 +581,8 @@ real players. Two things to establish before planning anything:
   initializer assigns `hp` — call `Initialize()` after setting custom hp (documented by
   `PlayerTests.CustomHp_RequiresInitialize_ToTakeEffect`).
 - Incremental branch of `FaceDirectionConverterVectorVariable` (toggle off) is only for a
-  possible non-iOS streamed-face path (dormant `4_Network`); delete it if face stays
+  possible non-iOS streamed-face path — the networking that would have fed it lives solely on
+  `origin/research/magic_onion` and is not in this project. Delete the branch if face stays
   iOS-only.
 - `../ModuleCollections/ScreenTransition/Runtime/Samples/TestLoadingFade.cs` still uses
   legacy Input (unused sample; would throw only if placed in a scene).

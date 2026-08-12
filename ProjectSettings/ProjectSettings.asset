@@ -59,7 +59,7 @@ PlayerSettings:
   androidShowActivityIndicatorOnLoading: -1
   iosUseCustomAppBackgroundBehavior: 0
   allowedAutorotateToPortrait: 1
-  allowedAutorotateToPortraitUpsideDown: 1
+  allowedAutorotateToPortraitUpsideDown: 0
   allowedAutorotateToLandscapeRight: 0
   allowedAutorotateToLandscapeLeft: 0
   useOSAutorotation: 1
@@ -148,7 +148,7 @@ PlayerSettings:
   loadStoreDebugModeEnabled: 0
   visionOSBundleVersion: 1.0
   tvOSBundleVersion: 1.0
-  bundleVersion: 0.1
+  bundleVersion: 1.0
   preloadedAssets: []
   metroInputSource: 0
   wsaTransparentSwapchain: 0
@@ -174,7 +174,7 @@ PlayerSettings:
   buildNumber:
     Standalone: 0
     VisionOS: 0
-    iPhone: 0
+    iPhone: 1
     tvOS: 0
   overrideDefaultApplicationIdentifier: 1
   AndroidBundleVersionCode: 1
@@ -615,7 +615,9 @@ PlayerSettings:
   enableInternalProfiler: 0
   logObjCUncaughtExceptions: 1
   enableCrashReportAPI: 0
-  cameraUsageDescription: Required for Face Tracking
+  cameraUsageDescription: BobaKami uses the front camera to track your face, so you
+    can aim and bite by moving your head and opening your mouth. Camera video is processed
+    on your device and is never recorded, stored, or sent anywhere.
   locationUsageDescription: 
   microphoneUsageDescription: 
   bluetoothUsageDescription: 
