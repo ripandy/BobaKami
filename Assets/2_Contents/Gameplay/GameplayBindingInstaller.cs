@@ -22,6 +22,7 @@ namespace BobaKami.Gameplay
         [SerializeField] private PlayerDirectionVariable playerDirectionVariable;
         [SerializeField] private FaceDirectionConverterVectorVariable faceDirectionConverterVectorVariable;
         [SerializeField] private BittenBobaGameEvent bittenBobaGameEvent;
+        [SerializeField] private FaceTrackingEnabledVariable faceTrackingEnabledVariable;
 
         public void Install(DIContainer container, IContextArg contextArg)
         {
@@ -42,6 +43,7 @@ namespace BobaKami.Gameplay
             container.BindFromInstance<IIntroPresenter>(introPresenter);
             container.BindFromInstance<IGameOverPresenter>(gameOverPresenter);
             container.BindFromInstance<IHighScoreStore>(highScoreData);
+            container.BindFromInstance<IFaceTrackingStateProvider>(faceTrackingEnabledVariable);
 
             // Input Providers
             container.BindFromInstance<IPlayerDirectionInputProvider>(faceDirectionConverterVectorVariable);

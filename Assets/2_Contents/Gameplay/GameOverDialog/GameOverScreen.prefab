@@ -1709,6 +1709,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   highScoreData: {fileID: 11400000, guid: a2e0d83e043a24031a0c64cd98b7fae2, type: 2}
+  faceTrackingEnabled: {fileID: 11400000, guid: 71c02dc6af80414a94b85cc441033aa1, type: 2}
   faceVector: {fileID: 11400000, guid: cdfd753ea791f4a17a6deb42391ec24f, type: 2}
   mouthOpenEvent: {fileID: 11400000, guid: 9b55983f9987245539d5aea4e451a1e8, type: 2}
   animationObjects:

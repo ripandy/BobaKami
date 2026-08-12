@@ -33,7 +33,8 @@ namespace BobaKami.Tests
                 bobaPresenter);
             var highScoreTable = new HighScoreTable();
             var highScoreStore = new RecordingHighScoreStore();
-            var gameOverGameState = new GameOverGameState(player, gameOverPresenter, highScoreTable, highScoreStore);
+            var gameOverGameState = new GameOverGameState(player, gameOverPresenter, highScoreTable,
+                highScoreStore, new ScriptedFaceTrackingState());
 
             // Round 1: Intro -> GamePlay -> GameOver -> restart (Intro).
             Assert.AreEqual(GameStateEnum.GamePlay, await introGameState.Running());
@@ -52,7 +53,7 @@ namespace BobaKami.Tests
 
             // Both runs auto-dropped every boba, so neither scored and neither took a table slot.
             Assert.AreEqual(0, highScoreStore.SaveCount);
-            Assert.AreEqual(0, highScoreTable.Entries.Count);
+            Assert.AreEqual(0, highScoreTable.EntriesFor(true).Count);
         }
 
         [Test]
@@ -68,15 +69,61 @@ namespace BobaKami.Tests
             var highScoreStore = new RecordingHighScoreStore();
             var gameOverPresenter = new ScriptedGameOverPresenter(false);
             var gameOverGameState = new GameOverGameState(
-                player, gameOverPresenter, highScoreTable, highScoreStore);
+                player, gameOverPresenter, highScoreTable, highScoreStore, new ScriptedFaceTrackingState());
 
             Assert.AreEqual(GameStateEnum.None, await gameOverGameState.Running());
 
             Assert.AreEqual(1, highScoreStore.SaveCount);
             Assert.AreSame(highScoreTable, highScoreStore.LastSaved);
-            Assert.AreEqual(100, highScoreTable.BestScore);
+            Assert.AreEqual(100, highScoreTable.BestScoreFor(true));
             // Rank 1 is the signal the NEW-record badge reads.
             Assert.AreEqual(new[] { 1 }, gameOverPresenter.ShownRanks);
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public async Task GameOver_FilesTheRun_InTheTableForItsInputMode(bool faceTracking)
+        {
+            var player = new Player { hp = 20 };
+            player.Initialize();
+            player.EatBoba();  // Score = 100
+            player.Damaged();  // dead
+
+            var highScoreTable = new HighScoreTable();
+            var highScoreStore = new RecordingHighScoreStore();
+            var gameOverPresenter = new ScriptedGameOverPresenter(false);
+            var gameOverGameState = new GameOverGameState(player, gameOverPresenter, highScoreTable,
+                highScoreStore, new ScriptedFaceTrackingState(faceTracking));
+
+            await gameOverGameState.Running();
+
+            Assert.AreEqual(100, highScoreTable.BestScoreFor(faceTracking));
+            Assert.AreEqual(0, highScoreTable.EntriesFor(!faceTracking).Count,
+                "A run must not appear in the other input mode's table.");
+        }
+
+        [Test]
+        public async Task GameOver_RanksAgainstItsOwnTable_NotTheOtherModes()
+        {
+            // A touch run is a new record even when a much higher face score stands, because the
+            // two are no longer competing. This is what the booth split was for.
+            var player = new Player { hp = 20 };
+            player.Initialize();
+            player.EatBoba();  // Score = 100
+            player.Damaged();  // dead
+
+            var highScoreTable = new HighScoreTable();
+            highScoreTable.TrySubmit(99999, true, System.DateTime.UtcNow); // a face score towers over it
+            var highScoreStore = new RecordingHighScoreStore();
+            var gameOverPresenter = new ScriptedGameOverPresenter(false);
+            var gameOverGameState = new GameOverGameState(player, gameOverPresenter, highScoreTable,
+                highScoreStore, new ScriptedFaceTrackingState(false));
+
+            await gameOverGameState.Running();
+
+            Assert.AreEqual(new[] { 1 }, gameOverPresenter.ShownRanks,
+                "The touch run tops the touch table, so the NEW badge must light.");
+            Assert.AreEqual(99999, highScoreTable.BestScoreFor(true), "The face table is untouched.");
         }
 
         [Test]
@@ -91,15 +138,15 @@ namespace BobaKami.Tests
             player.Damaged();  // dead
 
             var highScoreTable = new HighScoreTable();
-            highScoreTable.TrySubmit(100, System.DateTime.UtcNow); // an incumbent 100 already stands
+            highScoreTable.TrySubmit(100, true, System.DateTime.UtcNow); // an incumbent 100 already stands
             var highScoreStore = new RecordingHighScoreStore();
             var gameOverPresenter = new ScriptedGameOverPresenter(false);
             var gameOverGameState = new GameOverGameState(
-                player, gameOverPresenter, highScoreTable, highScoreStore);
+                player, gameOverPresenter, highScoreTable, highScoreStore, new ScriptedFaceTrackingState());
 
             await gameOverGameState.Running();
 
-            Assert.AreEqual(100, highScoreTable.BestScore);
+            Assert.AreEqual(100, highScoreTable.BestScoreFor(true));
             Assert.AreEqual(new[] { 2 }, gameOverPresenter.ShownRanks);
         }
 
@@ -115,13 +162,13 @@ namespace BobaKami.Tests
             var highScoreStore = new RecordingHighScoreStore();
             var gameOverPresenter = new ScriptedGameOverPresenter(false);
             var gameOverGameState = new GameOverGameState(
-                player, gameOverPresenter, highScoreTable, highScoreStore);
+                player, gameOverPresenter, highScoreTable, highScoreStore, new ScriptedFaceTrackingState());
 
             Assert.IsTrue(player.IsAlive);
             await gameOverGameState.Running();
 
             Assert.AreEqual(0, highScoreStore.SaveCount);
-            Assert.AreEqual(0, highScoreTable.Entries.Count);
+            Assert.AreEqual(0, highScoreTable.EntriesFor(true).Count);
             Assert.AreEqual(new[] { 0 }, gameOverPresenter.ShownRanks);
         }
     }

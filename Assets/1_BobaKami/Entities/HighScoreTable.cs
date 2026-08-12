@@ -27,57 +27,88 @@ namespace BobaKami
     }
 
     /// <summary>
-    /// Local top-<see cref="Capacity"/> score table. Entries are kept sorted descending;
-    /// a tie places *after* the incumbent, so an equal score never displaces an older one.
+    /// Local top-<see cref="Capacity"/> score tables, kept separately for face tracking and for
+    /// touch/pointer/key play. The booth showed the two are not comparable — aiming with your
+    /// head is a different game from dragging a finger — so they rank against their own kind
+    /// rather than being reconciled with a fudge factor.
+    /// <para>
+    /// Within each table, entries are kept sorted descending and a tie places *after* the
+    /// incumbent, so an equal score never displaces an older one.
+    /// </para>
     /// </summary>
     [Serializable]
     public class HighScoreTable
     {
         public const int Capacity = 10;
 
+        /// <summary>
+        /// Face-tracking scores. Deliberately keeps the pre-split field name: every save written
+        /// before the tables were separated came from a device where Auto resolved to face
+        /// tracking, so those entries *are* face scores and land in the right table for free.
+        /// </summary>
         public List<HighScoreEntry> entries = new();
 
-        public IReadOnlyList<HighScoreEntry> Entries => entries;
+        /// <summary>Pointer, touch and key/gamepad scores. Null in any pre-split save; <see cref="Normalize"/> repairs it.</summary>
+        public List<HighScoreEntry> touchEntries = new();
 
-        public int BestScore => entries.Count > 0 ? entries[0].score : 0;
+        public IReadOnlyList<HighScoreEntry> EntriesFor(bool faceTracking) => TableFor(faceTracking);
+
+        public int BestScoreFor(bool faceTracking)
+        {
+            var table = TableFor(faceTracking);
+            return table.Count > 0 ? table[0].score : 0;
+        }
 
         /// <summary>
-        /// Inserts <paramref name="score"/> if it places, trimming the table to <see cref="Capacity"/>.
+        /// Inserts <paramref name="score"/> into the table for this input mode if it places there,
+        /// trimming that table to <see cref="Capacity"/>. The two tables rank independently.
         /// </summary>
-        /// <returns>The 1-based rank of the new entry, or 0 if it did not place.</returns>
-        public int TrySubmit(int score, DateTime recordedAtUtc)
+        /// <returns>The 1-based rank of the new entry within its own table, or 0 if it did not place.</returns>
+        public int TrySubmit(int score, bool faceTracking, DateTime recordedAtUtc)
         {
             if (score <= 0) return 0;
-            if (entries.Count >= Capacity && score <= entries[Capacity - 1].score) return 0;
+
+            var table = TableFor(faceTracking);
+            if (table.Count >= Capacity && score <= table[Capacity - 1].score) return 0;
 
             // Ties go after the incumbent: skip while the existing score is >= the new one.
             var index = 0;
-            while (index < entries.Count && entries[index].score >= score) index++;
+            while (index < table.Count && table[index].score >= score) index++;
 
-            entries.Insert(index, new HighScoreEntry(score, recordedAtUtc));
-            Trim();
+            table.Insert(index, new HighScoreEntry(score, recordedAtUtc));
+            Trim(table);
 
             return index + 1;
         }
 
         /// <summary>
-        /// Repairs the table after a load. JsonUtility leaves <see cref="entries"/> null for an
-        /// empty or hand-edited file, and nothing stops a save file from being out of order.
+        /// Repairs both tables after a load. JsonUtility leaves a list null when the file is empty,
+        /// hand-edited, or predates the face/touch split, and nothing stops a save file from being
+        /// out of order.
         /// </summary>
         public void Normalize()
         {
-            entries ??= new List<HighScoreEntry>();
-            entries.RemoveAll(entry => entry.score <= 0);
-            // OrderByDescending is a stable sort; List.Sort is not, and ties must keep the
-            // incumbent first to match TrySubmit's ordering.
-            entries = entries.OrderByDescending(entry => entry.score).ToList();
-            Trim();
+            entries = Repair(entries);
+            touchEntries = Repair(touchEntries);
+
+            static List<HighScoreEntry> Repair(List<HighScoreEntry> table)
+            {
+                table ??= new List<HighScoreEntry>();
+                table.RemoveAll(entry => entry.score <= 0);
+                // OrderByDescending is a stable sort; List.Sort is not, and ties must keep the
+                // incumbent first to match TrySubmit's ordering.
+                table = table.OrderByDescending(entry => entry.score).ToList();
+                Trim(table);
+                return table;
+            }
         }
 
-        private void Trim()
+        private List<HighScoreEntry> TableFor(bool faceTracking) => faceTracking ? entries : touchEntries;
+
+        private static void Trim(List<HighScoreEntry> table)
         {
-            if (entries.Count <= Capacity) return;
-            entries.RemoveRange(Capacity, entries.Count - Capacity);
+            if (table.Count <= Capacity) return;
+            table.RemoveRange(Capacity, table.Count - Capacity);
         }
     }
 }

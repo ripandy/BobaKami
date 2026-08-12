@@ -351,6 +351,7 @@ MonoBehaviour:
   playerDirectionVariable: {fileID: 11400000, guid: 316db64eb9b8d451283a2160efff58bd, type: 2}
   faceDirectionConverterVectorVariable: {fileID: 11400000, guid: cdfd753ea791f4a17a6deb42391ec24f, type: 2}
   bittenBobaGameEvent: {fileID: 11400000, guid: aa20e3d133c234ba7b77685f7dcc26de, type: 2}
+  faceTrackingEnabledVariable: {fileID: 11400000, guid: 71c02dc6af80414a94b85cc441033aa1, type: 2}
 --- !u!114 &900000001
 MonoBehaviour:
   m_ObjectHideFlags: 0

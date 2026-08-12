@@ -18,6 +18,7 @@ namespace BobaKami.Gameplay
     public class GameOverPresenter : MonoBehaviour, IGameOverPresenter
     {
         [SerializeField] private HighScoreData highScoreData;
+        [SerializeField] private Variable<bool> faceTrackingEnabled;
         [SerializeField] private Variable<Vector2> faceVector;
         [SerializeField] private GameEvent<bool> mouthOpenEvent;
         [SerializeField] private Transform[] animationObjects;
@@ -86,8 +87,10 @@ namespace BobaKami.Gameplay
             scoreText.text = stats.Score.ToString();
             bobaCountText.text = stats.BobaEaten.ToString();
             comboText.text = stats.MaxCombo.ToString();
-            bestScoreText.text = highScoreData.Value.BestScore.ToString();
-            
+            // BEST is per input mode: face and touch keep separate tables, so showing the other
+            // mode's best would be comparing against a game the player did not just play.
+            bestScoreText.text = highScoreData.Value.BestScoreFor(faceTrackingEnabled.Value).ToString();
+
             // Rank 1 is the only new record. Comparing BestScore to Score instead would also
             // light up on a tie, since TrySubmit places equal scores after the incumbent.
             newHighScoreObject.SetActive(highScoreRank == 1);
