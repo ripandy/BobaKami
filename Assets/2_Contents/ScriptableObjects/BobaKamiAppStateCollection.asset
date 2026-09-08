@@ -16,10 +16,10 @@ MonoBehaviour:
   - name: Title
     loadBufferTime: 0
     showLoadingScreen: 0
-    bgmClip: {fileID: 0}
+    bgmClip: {fileID: 8300000, guid: 332e938a6aaff4d2db551768e5f56928, type: 3}
   - name: Gameplay
     loadBufferTime: 0
     showLoadingScreen: 1
-    bgmClip: {fileID: 8300000, guid: 16672ee6e15b6384bbfa402181e7ee0e, type: 3}
+    bgmClip: {fileID: 8300000, guid: 2e989573aa3c1495fb6eda387b4c836c, type: 3}
   valueEventType: 0
   autoResetValue: 0
