@@ -20,11 +20,14 @@ namespace BobaKami.Gameplay
         
         [Header("Output")]
         [SerializeField] private GameEvent<int> bittenBobaEvent;
+        [SerializeField] private GameEvent<int> playSoundEvent;
         
         [Header("Dependencies")]
         [SerializeField] private SoarDictionary<int, GameObject> bobas;
         [SerializeField] private Collider2D mouthCollider;
 
+        private const int BiteSoundId = 1;
+        
         private IDisposable subscription;
 
         private void Start()
@@ -38,6 +41,7 @@ namespace BobaKami.Gameplay
             if (opened || mouthCollider.enabled) return;
             
             mouthCollider.enabled = true;
+            playSoundEvent.Raise(BiteSoundId);
             
             await UniTask.Delay(TimeSpan.FromSeconds(mouthColliderEnableDuration), cancellationToken: cancellationToken);
             
